@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Capital Tycoon</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://yandex.ru/games/sdk/v2"></script>
+<style>
+/* ===== GLOBAL ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #fff; min-height: 100vh; overflow-x: hidden; padding-bottom: 90px;
+}
+
+/* ===== HEADER / BALANCE CARD ===== */
+.header { padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); }
+.balance-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 20px;
+    padding: 20px; position: relative; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.balance-card::before {
+    content: ''; position: absolute; top: -50%; right: -20%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.card-number { font-size: 13px; color: #94a3b8; letter-spacing: 2px; }
+.card-expiry { font-size: 13px; color: #94a3b8; }
+.balance-label { font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.balance-amount {
+    font-size: 28px; font-weight: 800;
+    background: linear-gradient(90deg, #fff 0%, #e2e8f0 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+.diamond-icon {
+    position: absolute; top: 20px; right: 20px;
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    opacity: 0.3; animation: diamondPulse 3s ease-in-out infinite;
+}
+@keyframes diamondPulse { 0%,100%{opacity:0.2;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.1)} }
+
+/* ===== CARD UPGRADE ===== */
+.card-upgrade {
+    margin: 0 16px 12px;
+    background: linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.2s;
+}
+.card-upgrade:hover { border-color: rgba(99,102,241,0.3); }
+.card-upgrade:active { transform: scale(0.98); }
+.card-img {
+    width: 60px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1);
+}
+.card-info-small { flex: 1; }
+.card-info-small .card-name { font-size: 14px; font-weight: 600; }
+.card-info-small .card-desc { font-size: 11px; color: #64748b; }
+.card-upgrade-btn {
+    padding: 8px 14px; border-radius: 10px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.card-upgrade-btn.buy {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: #fff; box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+}
+.card-upgrade-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+.card-upgrade-btn.maxed {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b;
+}
+
+/* ===== PER CLICK BAR ===== */
+.per-click-bar {
+    margin: 0 16px 12px;
+    background: linear-gradient(90deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.1) 100%);
+    border: 1px solid rgba(99,102,241,0.2); border-radius: 16px;
+    padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
+}
+.per-click-left { display: flex; align-items: center; gap: 8px; }
+.per-click-value { font-size: 18px; font-weight: 700; color: #a78bfa; }
+.per-click-label { font-size: 13px; color: #94a3b8; }
+.click-lvl { font-size: 11px; color: #6366f1; font-weight: 700; }
+.click-upgrade-btn {
+    padding: 8px 16px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: #fff; font-size: 12px; font-weight: 600; cursor: pointer;
+    white-space: nowrap; box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+}
+.click-upgrade-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+.click-upgrade-btn.maxed { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; }
+
+/* ===== AD BOOST ===== */
+.ad-boost {
+    margin: 0 16px 12px;
+    background: linear-gradient(90deg, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.05) 100%);
+    border: 1px solid rgba(34,197,94,0.2); border-radius: 16px;
+    padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.3s;
+}
+.ad-boost:hover { background: linear-gradient(90deg, rgba(34,197,94,0.25) 0%, rgba(22,163,74,0.1) 100%); }
+.ad-boost:active { transform: scale(0.98); }
+.ad-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.ad-text { flex: 1; }
+.ad-title { font-size: 15px; font-weight: 600; color: #4ade80; }
+.ad-subtitle { font-size: 12px; color: #86efac; opacity: 0.7; }
+.ad-boost.active {
+    border-color: #fbbf24;
+    background: linear-gradient(90deg, rgba(251,191,36,0.2) 0%, rgba(245,158,11,0.05) 100%);
+}
+.ad-boost.active .ad-icon { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+.ad-boost.active .ad-title { color: #fbbf24; }
+.ad-boost.active .ad-subtitle { color: #fcd34d; }
+
+/* ===== TAX WARNING ===== */
+.tax-warning {
+    margin: 0 16px 12px;
+    background: linear-gradient(90deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.05) 100%);
+    border: 1px solid rgba(239,68,68,0.3); border-radius: 16px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    display: none;
+}
+.tax-warning.show { display: flex; }
+.tax-warning-icon { font-size: 20px; }
+.tax-warning-text { font-size: 13px; color: #fca5a5; flex: 1; }
+.tax-pay-btn {
+    padding: 8px 14px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.tax-pay-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+/* ===== PASSIVE INDICATOR ===== */
+.passive-indicator { text-align: center; padding: 4px 16px; font-size: 12px; color: #4ade80; opacity: 0.8; }
+.passive-indicator .tax-info { color: #f87171; font-size: 11px; margin-top: 2px; }
+
+/* ===== CLICK AREA ===== */
+.click-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; min-height: 180px; position: relative; }
+.click-btn {
+    width: 130px; height: 130px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+    border: 3px solid rgba(255,255,255,0.15);
+    box-shadow: 0 0 40px rgba(99,102,241,0.4), 0 8px 32px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.1s; position: relative; user-select: none;
+}
+.click-btn:active { transform: scale(0.92); box-shadow: 0 0 20px rgba(99,102,241,0.3), 0 4px 16px rgba(0,0,0,0.3); }
+.click-btn::before {
+    content: ''; position: absolute; inset: -8px; border-radius: 50%;
+    border: 2px solid rgba(99,102,241,0.3); animation: ripple 2s ease-out infinite;
+}
+@keyframes ripple { 0%{transform:scale(1);opacity:1} 100%{transform:scale(1.3);opacity:0} }
+.click-btn-inner {
+    font-size: 44px; font-weight: 800;
+    background: linear-gradient(180deg, #fff 0%, #e0e7ff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.click-hint { margin-top: 14px; font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; }
+
+/* ===== FLOATING NUMBERS ===== */
+.float-num {
+    position: fixed; font-size: 20px; font-weight: 700; color: #a78bfa;
+    pointer-events: none; animation: floatUp 1s ease-out forwards; z-index: 1000;
+    text-shadow: 0 0 10px rgba(167,139,250,0.5);
+}
+@keyframes floatUp { 0%{opacity:1;transform:translateY(0)scale(1)} 100%{opacity:0;transform:translateY(-80px)scale(1.3)} }
+
+/* ===== TABS ===== */
+.tab-content { display: none; padding: 0 16px 20px; }
+.tab-content.active { display: block; }
+
+/* ===== SECTION TITLE ===== */
+.section-title {
+    font-size: 18px; font-weight: 700; margin: 16px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-title span { width: 4px; height: 20px; background: linear-gradient(180deg, #6366f1, #8b5cf6); border-radius: 2px; }
+
+/* ===== CARDS ===== */
+.card {
+    background: linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 16px;
+    padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+    transition: all 0.2s; position: relative; overflow: hidden;
+}
+.card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+.card:hover { border-color: rgba(99,102,241,0.3); }
+.card-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+}
+.card-info { flex: 1; min-width: 0; }
+.card-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-desc { font-size: 11px; color: #64748b; margin-top: 1px; }
+.card-income { font-size: 12px; color: #4ade80; font-weight: 500; }
+.card-tax { font-size: 11px; color: #f87171; }
+.card-btn {
+    padding: 9px 14px; border-radius: 10px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+}
+.card-btn.buy {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: #fff; box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+}
+.card-btn.buy:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+.card-btn.buy:active { transform: scale(0.95); }
+.card-btn.maxed { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: #1e293b; }
+.card-btn:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+.card-btn:disabled:hover { transform: none; }
+.card-level {
+    position: absolute; top: 6px; right: 10px;
+    font-size: 10px; color: #6366f1; font-weight: 700;
+    background: rgba(99,102,241,0.1); padding: 2px 7px; border-radius: 5px;
+}
+.card-blocked { opacity: 0.5; pointer-events: none; }
+.card-blocked .card-btn { display: none; }
+.card-blocked::after {
+    content: '🔒'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 18px;
+}
+
+/* Category colors */
+.invest-card .card-icon { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+.invest-card .card-name { color: #fbbf24; }
+.biz-card .card-icon { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); }
+.biz-card .card-name { color: #60a5fa; }
+.item-card .card-icon { background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); }
+.item-card .card-name { color: #f472b6; }
+.realty-card .card-icon { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+.realty-card .card-name { color: #34d399; }
+
+/* ===== PROFILE ===== */
+.profile-header { text-align: center; padding: 24px 20px; }
+.profile-avatar {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; margin: 0 auto 12px;
+    border: 3px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(99,102,241,0.3);
+}
+.profile-name { font-size: 20px; font-weight: 700; }
+.profile-level { font-size: 13px; color: #a78bfa; margin-top: 3px; }
+.profile-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+.stat-box {
+    background: linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+    padding: 12px 6px; text-align: center;
+}
+.stat-value { font-size: 15px; font-weight: 700; color: #fff; }
+.stat-label { font-size: 10px; color: #64748b; margin-top: 3px; }
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, rgba(15,23,42,0.95) 0%, #0f172a 100%);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; justify-content: space-around;
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    z-index: 100;
+}
+.nav-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px; padding: 6px 10px; cursor: pointer; border-radius: 10px;
+    transition: all 0.2s; border: none; background: none;
+    color: #64748b; font-family: inherit; position: relative;
+}
+.nav-item:hover { color: #94a3b8; }
+.nav-item.active { color: #6366f1; }
+.nav-item.active .nav-icon {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.nav-icon { font-size: 20px; }
+.nav-label { font-size: 10px; font-weight: 500; }
+.nav-badge {
+    position: absolute; top: 0; right: 6px;
+    background: #ef4444; color: #fff; font-size: 9px; font-weight: 700;
+    width: 16px; height: 16px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== XP BAR ===== */
+.xp-bar { width: 100%; height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+.xp-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 3px; transition: width 0.5s ease; }
+
+/* ===== TOAST ===== */
+.toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(99,102,241,0.3); color: #fff;
+    padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 500;
+    z-index: 1001; opacity: 0; pointer-events: none;
+    transition: all 0.3s; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(10px); }
+
+/* ===== LEVEL UP OVERLAY ===== */
+.levelup-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center;
+    z-index: 2000; backdrop-filter: blur(5px);
+}
+.levelup-overlay.show { display: flex; }
+.levelup-box {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(99,102,241,0.3); border-radius: 24px;
+    padding: 32px; text-align: center; max-width: 280px;
+    animation: levelUpPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes levelUpPop { 0%{transform:scale(0.5);opacity:0} 100%{transform:scale(1);opacity:1} }
+.levelup-title {
+    font-size: 24px; font-weight: 800;
+    background: linear-gradient(90deg, #fbbf24, #f59e0b);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+}
+.levelup-sub { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
+.levelup-reward { font-size: 18px; font-weight: 700; color: #4ade80; }
+.levelup-btn {
+    margin-top: 16px; padding: 12px 32px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none; border-radius: 12px; color: #fff;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+/* ===== PARTICLES ===== */
+.particle {
+    position: fixed; pointer-events: none;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #a78bfa; opacity: 0.8; z-index: 999;
+}
+
+/* ===== KID-FRIENDLY ENHANCEMENTS ===== */
+
+/* Bouncy click button */
+.click-btn {
+    animation: btnBounce 2s ease-in-out infinite;
+}
+@keyframes btnBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+.click-btn:active {
+    animation: none;
+    transform: scale(0.92) !important;
+}
+
+/* Sparkle ring around button */
+.click-btn::after {
+    content: '';
+    position: absolute;
+    inset: -15px;
+    border-radius: 50%;
+    border: 2px dashed rgba(99,102,241,0.2);
+    animation: spinRing 8s linear infinite;
+    pointer-events: none;
+}
+@keyframes spinRing {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Star burst on click */
+.star-burst {
+    position: fixed; pointer-events: none; z-index: 998;
+    font-size: 20px; animation: starBurstAnim 0.7s ease-out forwards;
+}
+@keyframes starBurstAnim {
+    0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(var(--rot)); opacity: 0; }
+}
+
+/* Coin rain effect */
+.coin-rain {
+    position: fixed; pointer-events: none; z-index: 997;
+    font-size: 18px; animation: coinRainAnim 1.2s ease-out forwards;
+}
+@keyframes coinRainAnim {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
+}
+
+/* Big money popup for combos */
+.big-money-popup {
+    position: fixed; pointer-events: none; z-index: 1002;
+    font-size: 28px; font-weight: 900;
+    animation: bigMoneyPop 0.8s ease-out forwards;
+}
+@keyframes bigMoneyPop {
+    0% { transform: scale(0.5) translateY(0); opacity: 0; }
+    20% { transform: scale(1.3) translateY(-20px); opacity: 1; }
+    100% { transform: scale(1) translateY(-100px); opacity: 0; }
+}
+
+/* Rainbow text for high combos */
+.rainbow-text {
+    background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+    animation: rainbowShift 2s linear infinite;
+}
+@keyframes rainbowShift {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+/* Shake animation for critical hits */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
+}
+
+/* Glow pulse for active boost */
+.ad-boost.active {
+    animation: boostPulse 1s ease-in-out infinite;
+}
+@keyframes boostPulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(251,191,36,0); }
+    50% { box-shadow: 0 0 20px rgba(251,191,36,0.3); }
+}
+
+/* Floating emoji background decoration */
+.bg-emoji {
+    position: fixed; pointer-events: none; z-index: 0;
+    font-size: 24px; opacity: 0.03;
+    animation: bgFloat 20s ease-in-out infinite;
+}
+@keyframes bgFloat {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(10px, -20px) rotate(5deg); }
+    50% { transform: translate(-5px, -40px) rotate(-3deg); }
+    75% { transform: translate(15px, -20px) rotate(2deg); }
+}
+
+/* Card purchase flash */
+.card-flash {
+    animation: cardFlash 0.4s ease-out;
+}
+@keyframes cardFlash {
+    0% { box-shadow: 0 0 0 rgba(99,102,241,0); }
+    50% { box-shadow: 0 0 30px rgba(99,102,241,0.5); border-color: rgba(99,102,241,0.5); }
+    100% { box-shadow: 0 0 0 rgba(99,102,241,0); }
+}
+
+/* Combo overlay */
+.combo-overlay {
+    position: fixed; inset: 0; pointer-events: none;
+    display: none; align-items: center; justify-content: center;
+    z-index: 1500;
+}
+.combo-overlay.show { display: flex; }
+.combo-text {
+    font-size: 42px; font-weight: 900;
+    background: linear-gradient(90deg, #fbbf24, #f59e0b, #ef4444);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: comboPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    text-shadow: 0 0 30px rgba(251,191,36,0.5);
+}
+@keyframes comboPop {
+    0% { transform: scale(0.2) rotate(-10deg); opacity: 0; }
+    50% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 0; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="balance-card">
+        <div class="diamond-icon"></div>
+        <div class="card-top">
+            <span class="card-number">**** 8842</span>
+            <span class="card-expiry">08/28</span>
+        </div>
+        <div class="balance-label">Баланс:</div>
+        <div class="balance-amount" id="balance">$ 0,00</div>
+    </div>
+</div>
+
+<!-- CARD UPGRADE -->
+<div class="card-upgrade" id="cardUpgrade" onclick="upgradeCard()">
+    <div class="card-img" id="cardImg">💳</div>
+    <div class="card-info-small">
+        <div class="card-name" id="cardName">Базовая карта</div>
+        <div class="card-desc" id="cardDesc">Бонус клика +0%</div>
+    </div>
+    <button class="card-upgrade-btn buy" id="cardBtn" onclick="event.stopPropagation(); upgradeCard()">$5 000</button>
+</div>
+
+<!-- PER CLICK + UPGRADE -->
+<div class="per-click-bar">
+    <div class="per-click-left">
+        <span class="per-click-value" id="perClick">$ 1</span>
+        <span class="per-click-label">за клик</span>
+        <span class="click-lvl" id="clickLvl">ур. 1/11</span>
+    </div>
+    <button class="click-upgrade-btn buy" id="clickUpgradeBtn" onclick="upgradeClick()">Улучшить $100</button>
+</div>
+
+<!-- AD BOOST (Yandex rewarded video) -->
+<div class="ad-boost" id="adBoost" onclick="showRewardedAd()">
+    <div class="ad-icon">▶</div>
+    <div class="ad-text">
+        <div class="ad-title" id="adTitle">Ускоритель x3</div>
+        <div class="ad-subtitle" id="adSubtitle">За просмотр рекламы — 30 сек.</div>
+    </div>
+</div>
+
+<!-- TAX WARNING -->
+<div class="tax-warning" id="taxWarning">
+    <span class="tax-warning-icon">⚠️</span>
+    <div class="tax-warning-text" id="taxWarningText">Налоги не оплачены!</div>
+    <button class="tax-pay-btn" id="taxPayBtn" onclick="payTaxes()">Оплатить</button>
+</div>
+
+<!-- PASSIVE INDICATOR -->
+<div class="passive-indicator" id="passiveIndicator"></div>
+
+<!-- TAB: EARN -->
+<div class="tab-content active" id="tab-earn">
+    <div class="click-area" id="clickArea">
+        <div class="click-btn" id="clickBtn" onclick="handleClick(event)">
+            <div class="click-btn-inner">$</div>
+        </div>
+        <div class="click-hint">Кликайте, чтобы зарабатывать деньги<br><small>Пробел — тоже клик</small></div>
+    </div>
+</div>
+
+<!-- TAB: INVESTMENTS -->
+<div class="tab-content" id="tab-invest">
+    <div class="section-title"><span></span>Инвестиции</div>
+    <div id="investmentsList"></div>
+</div>
+
+<!-- TAB: BUSINESS -->
+<div class="tab-content" id="tab-business">
+    <div class="section-title"><span></span>Бизнесы</div>
+    <div id="businessList"></div>
+</div>
+
+<!-- TAB: REALTY -->
+<div class="tab-content" id="tab-realty">
+    <div class="section-title"><span></span>Недвижимость</div>
+    <div id="realtyList"></div>
+</div>
+
+<!-- TAB: ITEMS -->
+<div class="tab-content" id="tab-items">
+    <div class="section-title"><span></span>Предметы роскоши</div>
+    <div id="itemsList"></div>
+</div>
+
+<!-- TAB: PROFILE -->
+<div class="tab-content" id="tab-profile">
+    <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-name">Игрок</div>
+        <div class="profile-level">Уровень <span id="profileLevel">1</span></div>
+        <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+    </div>
+    <div class="profile-stats">
+        <div class="stat-box"><div class="stat-value" id="statClicks">0</div><div class="stat-label">Кликов</div></div>
+        <div class="stat-box"><div class="stat-value" id="statBiz">0</div><div class="stat-label">Бизнесов</div></div>
+        <div class="stat-box"><div class="stat-value" id="statItems">0</div><div class="stat-label">Предметов</div></div>
+        <div class="stat-box"><div class="stat-value" id="statInvest">0</div><div class="stat-label">Инвестиций</div></div>
+        <div class="stat-box"><div class="stat-value" id="statRealty">0</div><div class="stat-label">Недвижимости</div></div>
+        <div class="stat-box"><div class="stat-value" id="statPassive">$0/ч</div><div class="stat-label">Пассивный доход</div></div>
+    </div>
+    <div class="section-title"><span></span>Достижения</div>
+    <div id="achievementsList"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+    <button class="nav-item" data-tab="invest" onclick="switchTab('invest')">
+        <span class="nav-icon">📈</span><span class="nav-label">Инвестиции</span>
+        <span class="nav-badge" id="badgeInvest" style="display:none">!</span>
+    </button>
+    <button class="nav-item" data-tab="business" onclick="switchTab('business')">
+        <span class="nav-icon">🏢</span><span class="nav-label">Бизнес</span>
+        <span class="nav-badge" id="badgeBiz" style="display:none">!</span>
+    </button>
+    <button class="nav-item active" data-tab="earn" onclick="switchTab('earn')">
+        <span class="nav-icon" style="font-size:26px">💰</span><span class="nav-label">Заработок</span>
+    </button>
+    <button class="nav-item" data-tab="realty" onclick="switchTab('realty')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Недвижимость</span>
+        <span class="nav-badge" id="badgeRealty" style="display:none">!</span>
+    </button>
+    <button class="nav-item" data-tab="items" onclick="switchTab('items')">
+        <span class="nav-icon">🎁</span><span class="nav-label">Предметы</span>
+        <span class="nav-badge" id="badgeItems" style="display:none">!</span>
+    </button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- LEVEL UP OVERLAY -->
+<div class="levelup-overlay" id="levelupOverlay">
+    <div class="levelup-box">
+        <div class="levelup-title">🎉 LEVEL UP!</div>
+        <div class="levelup-sub">Вы достигли уровня <span id="newLevel">2</span></div>
+        <div class="levelup-reward">+ Бонус: <span id="levelReward">$100</span></div>
+        <button class="levelup-btn" onclick="closeLevelUp()">Круто!</button>
+    </div>
+</div>
+
+<!-- COMBO OVERLAY -->
+<div class="combo-overlay" id="comboOverlay">
+    <div class="combo-text" id="comboText">COMBO x2!</div>
+</div>
+
+<script>
+// ==================== PLATFORM DETECTION ====================
+const PLATFORM = {
+    YANDEX: 'yandex',
+    VK: 'vk',
+    STANDALONE: 'standalone'
+};
+
+let currentPlatform = PLATFORM.STANDALONE;
+let ysdk = null;
+let player = null;
+let adv = null;
+let vkBridge = null;
+let vkUser = null;
+
+// Detect platform
+function detectPlatform() {
+    // Check VK first (VK Mini Apps runs inside VK iframe with bridge)
+    if (window.vkBridge || (window.location.href.indexOf('vk_user_id') !== -1)) {
+        return PLATFORM.VK;
+    }
+    // Check Yandex
+    if (typeof YaGames !== 'undefined') {
+        return PLATFORM.YANDEX;
+    }
+    return PLATFORM.STANDALONE;
+}
+
+currentPlatform = detectPlatform();
+console.log('Platform detected:', currentPlatform);
+
+// ==================== VK BRIDGE INIT ====================
+function initVK() {
+    // Load VK Bridge if not present
+    if (!window.vkBridge) {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
+        script.onload = function() {
+            vkBridge = window.vkBridge;
+            vkBridge.send('VKWebAppInit').then(function() {
+                console.log('VK Bridge initialized');
+                // Get user info
+                vkBridge.send('VKWebAppGetUserInfo').then(function(user) {
+                    vkUser = user;
+                    console.log('VK User:', user.first_name, user.last_name);
+                    document.querySelector('.profile-name').textContent = user.first_name;
+                    if (user.photo_100) {
+                        document.querySelector('.profile-avatar').innerHTML = '<img src="' + user.photo_100 + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
+                    }
+                }).catch(function(err) {
+                    console.log('VK GetUserInfo error:', err);
+                });
+                loadGameVK();
+            }).catch(function(err) {
+                console.log('VK Bridge init error:', err);
+                loadGame();
+            });
+        };
+        script.onerror = function() {
+            console.log('VK Bridge load failed');
+            loadGame();
+        };
+        document.head.appendChild(script);
+    } else {
+        vkBridge = window.vkBridge;
+        vkBridge.send('VKWebAppInit').then(function() {
+            vkBridge.send('VKWebAppGetUserInfo').then(function(user) {
+                vkUser = user;
+                document.querySelector('.profile-name').textContent = user.first_name;
+                if (user.photo_100) {
+                    document.querySelector('.profile-avatar').innerHTML = '<img src="' + user.photo_100 + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
+                }
+            }).catch(function(err) { console.log('VK user error:', err); });
+            loadGameVK();
+        }).catch(function(err) {
+            console.log('VK init error:', err);
+            loadGame();
+        });
+    }
+}
+
+// ==================== VK SAVE / LOAD ====================
+function saveGameVK() {
+    if (!vkBridge) return;
+    const saveData = buildSaveData();
+    vkBridge.send('VKWebAppStorageSet', {
+        key: 'capital_tycoon_save',
+        value: JSON.stringify(saveData)
+    }).then(function() {
+        console.log('VK save OK');
+    }).catch(function(err) {
+        console.log('VK save error:', err);
+        // Fallback to localStorage
+        localStorage.setItem('capital_tycoon_save', JSON.stringify(saveData));
+    });
+}
+
+function loadGameVK() {
+    if (!vkBridge) { loadGame(); return; }
+    vkBridge.send('VKWebAppStorageGet', {
+        keys: ['capital_tycoon_save']
+    }).then(function(data) {
+        if (data.keys && data.keys[0] && data.keys[0].value) {
+            try {
+                const parsed = JSON.parse(data.keys[0].value);
+                applySaveData(parsed);
+                showToast('Прогресс загружен из ВК!');
+            } catch(e) {
+                console.log('VK parse error:', e);
+                loadGame();
+            }
+        } else {
+            // Try localStorage fallback
+            const fallback = localStorage.getItem('capital_tycoon_save');
+            if (fallback) {
+                try {
+                    applySaveData(JSON.parse(fallback));
+                    showToast('Прогресс загружен!');
+                } catch(e) { loadGame(); }
+            } else {
+                loadGame();
+            }
+        }
+    }).catch(function(err) {
+        console.log('VK load error:', err);
+        loadGame();
+    });
+}
+
+// ==================== YANDEX GAMES SDK ====================
+function initYandex() {
+    YaGames.init({
+        adv: {
+            onAdvClose: function(wasShown) {
+                console.log('Adv closed, was shown:', wasShown);
+            }
+        }
+    }).then(function(_ysdk) {
+        ysdk = _ysdk;
+        adv = ysdk.adv;
+        ysdk.getPlayer({ scopes: false }).then(function(_player) {
+            player = _player;
+            console.log('Yandex Player initialized');
+            loadGame();
+        }).catch(function(err) {
+            console.log('Yandex Player init error:', err);
+            loadGame();
+        });
+        // Show fullscreen ad every 3 minutes
+        setInterval(function() {
+            if (adv) {
+                adv.showFullscreenAdv({
+                    callbacks: {
+                        onClose: function() { console.log('Fullscreen closed'); },
+                        onError: function(err) { console.log('Fullscreen error:', err); }
+                    }
+                });
+            }
+        }, 180000);
+    }).catch(function(err) {
+        console.log('Yandex SDK init error:', err);
+        loadGame();
+    });
+}
+
+// ==================== PLATFORM ROUTING ====================
+if (currentPlatform === PLATFORM.VK) {
+    initVK();
+} else if (currentPlatform === PLATFORM.YANDEX) {
+    initYandex();
+} else {
+    console.log('Standalone mode - using localStorage');
+    loadGame();
+}
+
+// ==================== KID-FRIENDLY VISUAL EFFECTS ====================
+
+// Background floating emojis
+function createBgEmojis() {
+    const emojis = ['💰', '💎', '⭐', '🪙', '💵', '✨', '🎯', '🚀'];
+    for (let i = 0; i < 8; i++) {
+        const el = document.createElement('div');
+        el.className = 'bg-emoji';
+        el.textContent = emojis[i];
+        el.style.left = (Math.random() * 90 + 5) + '%';
+        el.style.top = (Math.random() * 80 + 10) + '%';
+        el.style.animationDelay = (Math.random() * 20) + 's';
+        el.style.animationDuration = (15 + Math.random() * 10) + 's';
+        document.body.appendChild(el);
+    }
+}
+
+// Star burst effect
+function createStarBurst(x, y, count) {
+    const stars = ['⭐', '✨', '🌟', '💫', '⚡'];
+    for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.className = 'star-burst';
+        star.textContent = stars[Math.floor(Math.random() * stars.length)];
+        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+        const dist = 40 + Math.random() * 60;
+        star.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+        star.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+        star.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+        star.style.left = x + 'px';
+        star.style.top = y + 'px';
+        document.body.appendChild(star);
+        setTimeout(function() { star.remove(); }, 700);
+    }
+}
+
+// Coin rain effect
+function createCoinRain(x, y) {
+    const coins = ['💰', '🪙', '💵', '💎'];
+    for (let i = 0; i < 6; i++) {
+        setTimeout(function() {
+            const coin = document.createElement('div');
+            coin.className = 'coin-rain';
+            coin.textContent = coins[Math.floor(Math.random() * coins.length)];
+            coin.style.left = (x + (Math.random() - 0.5) * 80) + 'px';
+            coin.style.top = (y - 20) + 'px';
+            document.body.appendChild(coin);
+            setTimeout(function() { coin.remove(); }, 1200);
+        }, i * 80);
+    }
+}
+
+// Big money popup for combos
+function showBigMoneyPopup(x, y, amount, isCritical) {
+    const popup = document.createElement('div');
+    popup.className = 'big-money-popup';
+    if (isCritical) {
+        popup.innerHTML = '<span class="rainbow-text">💥 КРИТ! +' + formatMoney(amount) + '</span>';
+    } else {
+        popup.textContent = '+' + formatMoney(amount);
+    }
+    popup.style.left = (x - 50) + 'px';
+    popup.style.top = (y - 60) + 'px';
+    popup.style.color = isCritical ? '#fbbf24' : '#a78bfa';
+    document.body.appendChild(popup);
+    setTimeout(function() { popup.remove(); }, 800);
+}
+
+// Combo overlay
+function showComboOverlay(combo) {
+    const overlay = document.getElementById('comboOverlay');
+    const text = document.getElementById('comboText');
+    const labels = ['', 'COMBO!', 'COMBO x2!', 'COMBO x3!', 'COMBO x4!', 'COMBO x5!', 'COMBO x6!', 'COMBO x7!', 'COMBO x8!', 'COMBO x9!', 'MEGA COMBO x10!'];
+    text.textContent = labels[Math.min(combo, 10)] || 'SUPER COMBO!';
+    overlay.classList.add('show');
+    setTimeout(function() {
+        overlay.classList.remove('show');
+    }, 600);
+}
+
+// Screen shake
+function shakeScreen() {
+    document.body.style.animation = 'shake 0.3s ease-in-out';
+    setTimeout(function() {
+        document.body.style.animation = '';
+    }, 300);
+}
+
+// ==================== GAME STATE ====================
+const game = {
+    balance: 0,
+    perClickBase: 1,
+    clickLevel: 1,
+    clickUpgradeCosts: [150, 1200, 6000, 32000, 180000, 950000, 5200000, 28000000, 150000000, 850000000, Infinity],
+    level: 1,
+    xp: 0,
+    xpToNext: 100,
+    totalClicks: 0,
+    totalEarned: 0,
+    adBoostActive: false,
+    adBoostMultiplier: 3,
+    adBoostTimeLeft: 0,
+    passiveIncomePerHour: 0,
+    taxDebt: 0,
+    taxTimer: 0,
+    taxRate: 0.18,
+    cardLevel: 0,
+    netWorth: 0,
+    taxPaidCount: 0,
+    comboCount: 0,
+    comboTimer: null,
+    comboMultiplier: 1,
+    totalComboClicks: 0,
+    bestCombo: 0,
+    criticalHits: 0
+};
+
+const cards = [
+    { level: 0, name: 'Базовая карта', icon: '💳', desc: 'Бонус клика +0%', bonus: 1.0, color: '#64748b', cost: 0 },
+    { level: 1, name: 'Серебряная карта', icon: '🥈', desc: 'Бонус клика +25%', bonus: 1.25, color: '#94a3b8', cost: 15000 },
+    { level: 2, name: 'Золотая карта', icon: '🥇', desc: 'Бонус клика +60%', bonus: 1.6, color: '#fbbf24', cost: 150000 },
+    { level: 3, name: 'Платиновая карта', icon: '💎', desc: 'Бонус клика +120%', bonus: 2.2, color: '#a78bfa', cost: 1500000 },
+    { level: 4, name: 'Чёрная карта', icon: '🖤', desc: 'Бонус клика +250%', bonus: 3.5, color: '#1e293b', cost: 15000000 }
+];
+
+const investments = [
+    { id: 'inv1', name: 'Облигации Alpha', icon: '📜', desc: 'Надёжные гос. облигации', baseCost: 500, income: 10, level: 0, maxLevel: 50, color: '#fbbf24' },
+    { id: 'inv2', name: 'Акции TechCorp', icon: '💻', desc: 'Технологические акции', baseCost: 3500, income: 35, level: 0, maxLevel: 40, color: '#60a5fa' },
+    { id: 'inv3', name: 'Нефтяные фьючерсы', icon: '🛢️', desc: 'Сырьевые контракты', baseCost: 22000, income: 140, level: 0, maxLevel: 35, color: '#f59e0b' },
+    { id: 'inv4', name: 'Криптовалюта', icon: '₿', desc: 'Цифровые активы', baseCost: 150000, income: 550, level: 0, maxLevel: 30, color: '#a78bfa' },
+    { id: 'inv5', name: 'Венчурный фонд', icon: '🚀', desc: 'Стартап-инвестиции', baseCost: 950000, income: 2200, level: 0, maxLevel: 25, color: '#f472b6' },
+    { id: 'inv6', name: 'Хедж-фонд', icon: '📊', desc: 'Премиум инвестиции', baseCost: 6500000, income: 9500, level: 0, maxLevel: 20, color: '#34d399' },
+    { id: 'inv7', name: 'Частный банк', icon: '🏦', desc: 'Банковский капитал', baseCost: 45000000, income: 45000, level: 0, maxLevel: 15, color: '#6366f1' },
+    { id: 'inv8', name: 'Космическая корп.', icon: '🌌', desc: 'Межпланетный бизнес', baseCost: 320000000, income: 220000, level: 0, maxLevel: 10, color: '#ec4899' }
+];
+
+const businesses = [
+    { id: 'biz1', name: 'Ларёк с шаурмой', icon: '🥙', desc: 'Уличная еда', baseCost: 1200, income: 18, level: 0, maxLevel: 50, color: '#f59e0b' },
+    { id: 'biz2', name: 'Кофейня', icon: '☕', desc: 'Уютное кафе', baseCost: 8000, income: 60, level: 0, maxLevel: 45, color: '#a78bfa' },
+    { id: 'biz3', name: 'Магазин одежды', icon: '👕', desc: 'Розничная торговля', baseCost: 55000, income: 220, level: 0, maxLevel: 40, color: '#60a5fa' },
+    { id: 'biz4', name: 'Автосалон', icon: '🚗', desc: 'Продажа авто', baseCost: 350000, income: 850, level: 0, maxLevel: 35, color: '#34d399' },
+    { id: 'biz5', name: 'IT-студия', icon: '💡', desc: 'Разработка ПО', baseCost: 2200000, income: 3500, level: 0, maxLevel: 30, color: '#f472b6' },
+    { id: 'biz6', name: 'Отельная сеть', icon: '🏨', desc: 'Гостиничный бизнес', baseCost: 14000000, income: 16000, level: 0, maxLevel: 25, color: '#fbbf24' },
+    { id: 'biz7', name: 'Авиакомпания', icon: '✈️', desc: 'Международные рейсы', baseCost: 85000000, income: 75000, level: 0, maxLevel: 20, color: '#6366f1' },
+    { id: 'biz8', name: 'Космопорт', icon: '🚀', desc: 'Космический туризм', baseCost: 550000000, income: 400000, level: 0, maxLevel: 15, color: '#ec4899' }
+];
+
+const realty = [
+    { id: 'real1', name: 'Трущобы', icon: '🏚️', desc: 'Старый дом на окраине', baseCost: 2500, income: 30, level: 0, maxLevel: 30, color: '#78716c' },
+    { id: 'real2', name: 'Квартира-студия', icon: '🏠', desc: 'Компактное жильё', baseCost: 18000, income: 100, level: 0, maxLevel: 28, color: '#a8a29e' },
+    { id: 'real3', name: 'Таунхаус', icon: '🏘️', desc: 'Семейный дом', baseCost: 110000, income: 380, level: 0, maxLevel: 25, color: '#fbbf24' },
+    { id: 'real4', name: 'Пентхаус', icon: '🏢', desc: 'Люкс-апартаменты', baseCost: 750000, income: 1500, level: 0, maxLevel: 22, color: '#a78bfa' },
+    { id: 'real5', name: 'Вилла', icon: '🏰', desc: 'Особняк с бассейном', baseCost: 4800000, income: 6500, level: 0, maxLevel: 20, color: '#34d399' },
+    { id: 'real6', name: 'Отель 5★', icon: '🏨', desc: 'Премиум-отель', baseCost: 30000000, income: 30000, level: 0, maxLevel: 18, color: '#60a5fa' },
+    { id: 'real7', name: 'Небоскрёб', icon: '🌆', desc: 'Бизнес-центр', baseCost: 180000000, income: 150000, level: 0, maxLevel: 15, color: '#6366f1' },
+    { id: 'real8', name: 'Кинотеатр Лас-Вегаса', icon: '🎬', desc: 'Легендарный комплекс', baseCost: 1200000000, income: 800000, level: 0, maxLevel: 12, color: '#ec4899' }
+];
+
+const items = [
+    { id: 'item1', name: 'iPhone Pro', icon: '📱', desc: 'Флагманский смартфон', cost: 8000, owned: false },
+    { id: 'item2', name: 'MacBook Ultra', icon: '💻', desc: 'Профессиональный ноутбук', cost: 45000, owned: false },
+    { id: 'item3', name: 'Часы Rolex', icon: '⌚', desc: 'Швейцарские часы', cost: 180000, owned: false },
+    { id: 'item4', name: 'Яхта Azure', icon: '🛥️', desc: 'Люксовая яхта', cost: 950000, owned: false },
+    { id: 'item5', name: 'Lamborghini', icon: '🏎️', desc: 'Суперкар мечты', cost: 4500000, owned: false },
+    { id: 'item6', name: 'Вилла на берегу', icon: '🏖️', desc: 'Недвижимость премиум', cost: 25000000, owned: false },
+    { id: 'item7', name: 'Частный остров', icon: '🏝️', desc: 'Собственный остров', cost: 150000000, owned: false },
+    { id: 'item8', name: 'Космическая станция', icon: '🛰️', desc: 'Орбитальная база', cost: 1500000000, owned: false }
+];
+
+const achievements = [
+    { id: 'ach1', name: 'Первый клик', desc: 'Сделайте 1 клик', icon: '👆', condition: function() { return game.totalClicks >= 1; }, unlocked: false },
+    { id: 'ach2', name: 'Сотня кликов', desc: 'Сделайте 100 кликов', icon: '💯', condition: function() { return game.totalClicks >= 100; }, unlocked: false },
+    { id: 'ach3', name: 'Тысяча кликов', desc: 'Сделайте 1000 кликов', icon: '🔥', condition: function() { return game.totalClicks >= 1000; }, unlocked: false },
+    { id: 'ach4', name: 'Первый бизнес', desc: 'Купите первый бизнес', icon: '🏢', condition: function() { return businesses.some(function(b) { return b.level > 0; }); }, unlocked: false },
+    { id: 'ach5', name: 'Инвестор', desc: 'Сделайте первую инвестицию', icon: '📈', condition: function() { return investments.some(function(i) { return i.level > 0; }); }, unlocked: false },
+    { id: 'ach6', name: 'Миллионер', desc: 'Накопите $1,000,000', icon: '💎', condition: function() { return game.balance >= 1000000; }, unlocked: false },
+    { id: 'ach7', name: 'Миллиардер', desc: 'Накопите $1,000,000,000', icon: '👑', condition: function() { return game.balance >= 1000000000; }, unlocked: false },
+    { id: 'ach8', name: 'Коллекционер', desc: 'Купите 4 предмета роскоши', icon: '🎁', condition: function() { return items.filter(function(i) { return i.owned; }).length >= 4; }, unlocked: false },
+    { id: 'ach9', name: 'Землевладелец', desc: 'Купите первую недвижимость', icon: '🏠', condition: function() { return realty.some(function(r) { return r.level > 0; }); }, unlocked: false },
+    { id: 'ach10', name: 'Честный налогоплательщик', desc: 'Оплатите налоги 5 раз', icon: '📝', condition: function() { return game.taxPaidCount >= 5; }, unlocked: false },
+    { id: 'ach11', name: 'Комбо-мастер', desc: 'Достигните комбо x10', icon: '⚡', condition: function() { return game.bestCombo >= 10; }, unlocked: false },
+    { id: 'ach12', name: 'Критический удар', desc: 'Сделайте 50 критических ударов', icon: '💥', condition: function() { return game.criticalHits >= 50; }, unlocked: false }
+];
+
+// ==================== SAVE / LOAD ====================
+function buildSaveData() {
+    return {
+        balance: game.balance,
+        clickLevel: game.clickLevel,
+        level: game.level,
+        xp: game.xp,
+        xpToNext: game.xpToNext,
+        totalClicks: game.totalClicks,
+        totalEarned: game.totalEarned,
+        cardLevel: game.cardLevel,
+        taxTimer: game.taxTimer,
+        taxPaidCount: game.taxPaidCount,
+        bestCombo: game.bestCombo,
+        criticalHits: game.criticalHits,
+        investments: investments.map(function(i) { return { id: i.id, level: i.level }; }),
+        businesses: businesses.map(function(b) { return { id: b.id, level: b.level }; }),
+        realty: realty.map(function(r) { return { id: r.id, level: r.level }; }),
+        items: items.map(function(i) { return { id: i.id, owned: i.owned }; }),
+        achievements: achievements.map(function(a) { return { id: a.id, unlocked: a.unlocked }; })
+    };
+}
+
+function applySaveData(data) {
+    if (!data || Object.keys(data).length === 0) return;
+    game.balance = data.balance || 0;
+    game.clickLevel = data.clickLevel || 1;
+    game.perClickBase = Math.pow(2, game.clickLevel - 1);
+    game.level = data.level || 1;
+    game.xp = data.xp || 0;
+    game.xpToNext = data.xpToNext || 100;
+    game.totalClicks = data.totalClicks || 0;
+    game.totalEarned = data.totalEarned || 0;
+    game.cardLevel = data.cardLevel || 0;
+    game.taxTimer = data.taxTimer || 0;
+    game.taxPaidCount = data.taxPaidCount || 0;
+    game.bestCombo = data.bestCombo || 0;
+    game.criticalHits = data.criticalHits || 0;
+
+    if (data.investments) {
+        data.investments.forEach(function(saved) {
+            const inv = investments.find(function(i) { return i.id === saved.id; });
+            if (inv) inv.level = saved.level || 0;
+        });
+    }
+    if (data.businesses) {
+        data.businesses.forEach(function(saved) {
+            const biz = businesses.find(function(b) { return b.id === saved.id; });
+            if (biz) biz.level = saved.level || 0;
+        });
+    }
+    if (data.realty) {
+        data.realty.forEach(function(saved) {
+            const r = realty.find(function(x) { return x.id === saved.id; });
+            if (r) r.level = saved.level || 0;
+        });
+    }
+    if (data.items) {
+        data.items.forEach(function(saved) {
+            const item = items.find(function(i) { return i.id === saved.id; });
+            if (item) item.owned = saved.owned || false;
+        });
+    }
+    if (data.achievements) {
+        data.achievements.forEach(function(saved) {
+            const ach = achievements.find(function(a) { return a.id === saved.id; });
+            if (ach) ach.unlocked = saved.unlocked || false;
+        });
+    }
+}
+
+function saveGame() {
+    const saveData = buildSaveData();
+
+    // Yandex
+    if (currentPlatform === PLATFORM.YANDEX && player) {
+        player.setData(saveData).then(function() {
+            console.log('Yandex save OK');
+        }).catch(function(err) {
+            console.log('Yandex save error:', err);
+        });
+        return;
+    }
+
+    // VK
+    if (currentPlatform === PLATFORM.VK && vkBridge) {
+        saveGameVK();
+        return;
+    }
+
+    // Standalone - localStorage
+    try {
+        localStorage.setItem('capital_tycoon_save', JSON.stringify(saveData));
+        console.log('localStorage save OK');
+    } catch(e) {
+        console.log('localStorage save error:', e);
+    }
+}
+
+function loadGame() {
+    if (!player) {
+        updateUI();
+        return;
+    }
+
+    player.getData().then(function(data) {
+        if (data && Object.keys(data).length > 0) {
+            game.balance = data.balance || 0;
+            game.clickLevel = data.clickLevel || 1;
+            game.perClickBase = Math.pow(2, game.clickLevel - 1);
+            game.level = data.level || 1;
+            game.xp = data.xp || 0;
+            game.xpToNext = data.xpToNext || 100;
+            game.totalClicks = data.totalClicks || 0;
+            game.totalEarned = data.totalEarned || 0;
+            game.cardLevel = data.cardLevel || 0;
+            game.taxTimer = data.taxTimer || 0;
+            game.taxPaidCount = data.taxPaidCount || 0;
+            game.bestCombo = data.bestCombo || 0;
+            game.criticalHits = data.criticalHits || 0;
+
+            if (data.investments) {
+                data.investments.forEach(function(saved) {
+                    const inv = investments.find(function(i) { return i.id === saved.id; });
+                    if (inv) inv.level = saved.level || 0;
+                });
+            }
+            if (data.businesses) {
+                data.businesses.forEach(function(saved) {
+                    const biz = businesses.find(function(b) { return b.id === saved.id; });
+                    if (biz) biz.level = saved.level || 0;
+                });
+            }
+            if (data.realty) {
+                data.realty.forEach(function(saved) {
+                    const r = realty.find(function(x) { return x.id === saved.id; });
+                    if (r) r.level = saved.level || 0;
+                });
+            }
+            if (data.items) {
+                data.items.forEach(function(saved) {
+                    const item = items.find(function(i) { return i.id === saved.id; });
+                    if (item) item.owned = saved.owned || false;
+                });
+            }
+            if (data.achievements) {
+                data.achievements.forEach(function(saved) {
+                    const ach = achievements.find(function(a) { return a.id === saved.id; });
+                    if (ach) ach.unlocked = saved.unlocked || false;
+                });
+            }
+
+            showToast('Прогресс загружен!');
+        }
+        recalcPassive();
+        updateUI();
+        createBgEmojis();
+    }).catch(function(err) {
+        console.log('Load error:', err);
+        updateUI();
+        createBgEmojis();
+    });
+}
+
+// Auto-save every 30 seconds
+setInterval(function() {
+    saveGame();
+}, 30000);
+
+// ==================== UTILS ====================
+function formatMoney(n) {
+    if (n >= 1e15) return (n / 1e15).toFixed(2) + ' квадр.';
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + ' трлн.';
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + ' млрд.';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + ' млн.';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + ' тыс.';
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatShort(n) {
+    if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return Math.floor(n).toString();
+}
+
+function getCost(baseCost, level) {
+    return Math.floor(baseCost * Math.pow(1.25, level));
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2000);
+}
+
+// ==================== CLICK MECHANICS ====================
+function handleClick(e) {
+    game.totalClicks++;
+    game.totalComboClicks++;
+
+    // Combo system
+    game.comboCount++;
+    if (game.comboCount > game.bestCombo) {
+        game.bestCombo = game.comboCount;
+    }
+
+    // Combo multiplier: every 3 clicks = x2, every 5 = x3, etc.
+    if (game.comboCount >= 10) {
+        game.comboMultiplier = 4;
+    } else if (game.comboCount >= 7) {
+        game.comboMultiplier = 3;
+    } else if (game.comboCount >= 4) {
+        game.comboMultiplier = 2;
+    } else {
+        game.comboMultiplier = 1;
+    }
+
+    // Show combo overlay at milestones
+    if (game.comboCount === 3 || game.comboCount === 5 || game.comboCount === 7 || game.comboCount === 10) {
+        showComboOverlay(game.comboCount);
+    }
+
+    // Reset combo timer
+    if (game.comboTimer) clearTimeout(game.comboTimer);
+    game.comboTimer = setTimeout(function() {
+        game.comboCount = 0;
+        game.comboMultiplier = 1;
+    }, 2000);
+
+    // Critical hit chance (5%)
+    const isCritical = Math.random() < 0.05;
+    if (isCritical) game.criticalHits++;
+
+    let earned = game.perClickBase;
+    if (game.adBoostActive) earned *= game.adBoostMultiplier;
+    earned *= game.comboMultiplier;
+    if (isCritical) earned *= 5;
+    earned = Math.floor(earned);
+
+    game.balance += earned;
+    game.totalEarned += earned;
+    game.xp += Math.max(1, Math.floor(Math.log10(earned + 1)));
+
+    updateUI();
+    checkLevelUp();
+    checkAchievements();
+
+    const cx = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth/2);
+    const cy = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : window.innerHeight/2);
+
+    // Floating number
+    const float = document.createElement('div');
+    float.className = 'float-num';
+    if (isCritical) {
+        float.innerHTML = '<span class="rainbow-text">💥 +' + formatMoney(earned) + '</span>';
+        float.style.fontSize = '26px';
+    } else if (game.comboMultiplier > 1) {
+        float.textContent = '🔥 x' + game.comboMultiplier + ' +' + formatMoney(earned);
+        float.style.color = '#fbbf24';
+    } else {
+        float.textContent = '+' + formatMoney(earned);
+    }
+    float.style.left = cx + 'px';
+    float.style.top = cy + 'px';
+    document.body.appendChild(float);
+    setTimeout(function() { float.remove(); }, 1000);
+
+    // Star burst
+    let starCount = 4;
+    if (game.comboMultiplier > 1) starCount = 8;
+    if (isCritical) starCount = 15;
+    createStarBurst(cx, cy, starCount);
+
+    // Coin rain for combos/criticals
+    if (game.comboMultiplier >= 3 || isCritical) {
+        createCoinRain(cx, cy);
+    }
+
+    // Big popup for critical
+    if (isCritical) {
+        showBigMoneyPopup(cx, cy, earned, true);
+        shakeScreen();
+    }
+
+    // Particles
+    const particleCount = isCritical ? 20 : (game.comboMultiplier > 1 ? 10 : 4);
+    for (let i = 0; i < particleCount; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 30 + Math.random() * 60;
+        p.style.left = cx + 'px';
+        p.style.top = cy + 'px';
+        const colors = ['#a78bfa', '#6366f1', '#8b5cf6', '#c4b5fd', '#fbbf24', '#f472b6'];
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.width = (3 + Math.random() * 5) + 'px';
+        p.style.height = p.style.width;
+        document.body.appendChild(p);
+        p.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: 1 },
+            { transform: 'translate(' + Math.cos(angle)*dist + 'px, ' + Math.sin(angle)*dist + 'px) scale(0)', opacity: 0 }
+        ], { duration: isCritical ? 1000 : 600, easing: 'ease-out' });
+        setTimeout(function() { p.remove(); }, isCritical ? 1000 : 600);
+    }
+}
+
+// ==================== CLICK UPGRADE ====================
+function upgradeClick() {
+    if (game.clickLevel >= 11) return;
+    const cost = game.clickUpgradeCosts[game.clickLevel - 1];
+    if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
+    game.balance -= cost;
+    game.clickLevel++;
+    game.perClickBase = Math.pow(2, game.clickLevel - 1);
+    saveGame();
+    updateUI();
+    showToast('Доход за клик: $' + formatMoney(game.perClickBase) + ' (ур. ' + game.clickLevel + ')');
+    createStarBurst(window.innerWidth/2, window.innerHeight/2, 10);
+}
+
+// ==================== CARD UPGRADE ====================
+function upgradeCard() {
+    const nextCard = cards[game.cardLevel + 1];
+    if (!nextCard) return;
+    if (game.balance < nextCard.cost) { showToast('Недостаточно средств!'); return; }
+    game.balance -= nextCard.cost;
+    game.cardLevel++;
+    saveGame();
+    updateUI();
+    showToast('Карта улучшена до: ' + cards[game.cardLevel].name + '!');
+    createStarBurst(window.innerWidth/2, window.innerHeight/2, 12);
+    shakeScreen();
+}
+
+// ==================== YANDEX REWARDED AD ====================
+function showRewardedAd() {
+    // VK ads
+    if (currentPlatform === PLATFORM.VK && vkBridge) {
+        vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' }).then(function(result) {
+            if (result.result) {
+                activateLocalBoost();
+            }
+        }).catch(function(err) {
+            console.log('VK ad error:', err);
+            showToast('Реклама недоступна. Ускоритель активирован!');
+            activateLocalBoost();
+        });
+        return;
+    }
+
+    // Yandex ads
+    if (adv) {
+        adv.showRewardedVideo({
+            callbacks: {
+                onOpen: function() {
+                    console.log('Rewarded video opened');
+                },
+                onRewarded: function() {
+                    console.log('Rewarded!');
+                    activateLocalBoost();
+                },
+                onClose: function() {
+                    console.log('Rewarded video closed');
+                },
+                onError: function(err) {
+                    console.log('Rewarded video error:', err);
+                    showToast('Ошибка загрузки рекламы');
+                }
+            }
+        });
+        return;
+    }
+
+    // Fallback
+    showToast('Реклама недоступна. Ускоритель активирован!');
+    activateLocalBoost();
+}
+
+function activateLocalBoost() {
+    if (game.adBoostActive) return;
+    game.adBoostActive = true;
+    game.adBoostTimeLeft = 30;
+
+    const btn = document.getElementById('adBoost');
+    btn.classList.add('active');
+
+    const interval = setInterval(function() {
+        game.adBoostTimeLeft--;
+        document.getElementById('adTitle').textContent = 'Ускоритель x3 активен!';
+        document.getElementById('adSubtitle').textContent = game.adBoostTimeLeft + ' сек. осталось';
+
+        if (game.adBoostTimeLeft <= 0) {
+            clearInterval(interval);
+            game.adBoostActive = false;
+            btn.classList.remove('active');
+            document.getElementById('adTitle').textContent = 'Ускоритель x3';
+            document.getElementById('adSubtitle').textContent = 'За просмотр рекламы — 30 сек.';
+            showToast('Ускоритель закончился!');
+        }
+    }, 1000);
+
+    showToast('Ускоритель x3 активирован!');
+    createStarBurst(window.innerWidth/2, window.innerHeight/2, 20);
+}
+
+// ==================== TAX SYSTEM ====================
+function calculateTaxDebt() {
+    let totalIncome = 0;
+    businesses.forEach(function(b) { totalIncome += b.income * b.level; });
+    investments.forEach(function(i) { totalIncome += i.income * i.level; });
+    realty.forEach(function(r) { totalIncome += r.income * r.level; });
+    return Math.floor(totalIncome * game.taxRate);
+}
+
+function payTaxes() {
+    const debt = calculateTaxDebt();
+    if (debt <= 0) { showToast('Налоги не начислены — купите бизнес!'); return; }
+    if (game.balance < debt) { showToast('Недостаточно средств! Нужно: $' + formatMoney(debt)); return; }
+    game.balance -= debt;
+    game.taxTimer = 0;
+    game.taxDebt = 0;
+    game.taxPaidCount++;
+    saveGame();
+    updateUI();
+    showToast('Налоги оплачены: $' + formatMoney(debt));
+    checkAchievements();
+}
+
+function updateTaxSystem() {
+    game.taxTimer++;
+    const hoursPassed = game.taxTimer / 3600;
+    const debt = calculateTaxDebt();
+    game.taxDebt = debt;
+
+    const warning = document.getElementById('taxWarning');
+    const warningText = document.getElementById('taxWarningText');
+    const payBtn = document.getElementById('taxPayBtn');
+
+    if (debt > 0) {
+        const hoursLeft = Math.max(0, 24 - hoursPassed);
+        if (hoursLeft <= 24 && hoursLeft > 0) {
+            warning.classList.add('show');
+            warningText.textContent = 'Налоги: $' + formatMoney(debt) + ' | Оплатите через ' + Math.floor(hoursLeft) + 'ч ' + Math.floor((hoursLeft % 1) * 60) + 'м';
+            payBtn.disabled = game.balance < debt;
+        } else if (hoursLeft <= 0) {
+            warning.classList.add('show');
+            warningText.textContent = '⚠️ НАЛОГИ ПРОСРОЧЕНЫ! Бизнес остановлен. Оплатите $' + formatMoney(debt);
+            payBtn.disabled = game.balance < debt;
+        }
+    } else {
+        warning.classList.remove('show');
+    }
+}
+
+// ==================== LEVEL UP ====================
+function checkLevelUp() {
+    while (game.xp >= game.xpToNext) {
+        game.xp -= game.xpToNext;
+        game.level++;
+        game.xpToNext = Math.floor(game.xpToNext * 1.5);
+        const reward = game.level * 50;
+        game.balance += reward;
+        document.getElementById('newLevel').textContent = game.level;
+        document.getElementById('levelReward').textContent = '$' + formatMoney(reward);
+        document.getElementById('levelupOverlay').classList.add('show');
+        createStarBurst(window.innerWidth/2, window.innerHeight/2, 25);
+        createCoinRain(window.innerWidth/2, window.innerHeight/2);
+    }
+}
+
+function closeLevelUp() {
+    document.getElementById('levelupOverlay').classList.remove('show');
+    updateUI();
+}
+
+// ==================== BUY MECHANICS ====================
+function buyInvestment(id) {
+    const inv = investments.find(function(i) { return i.id === id; });
+    if (!inv || inv.level >= inv.maxLevel) return;
+    const cost = getCost(inv.baseCost, inv.level);
+    if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
+    game.balance -= cost; inv.level++;
+    recalcPassive(); saveGame(); updateUI();
+    showToast(inv.name + ' улучшен до уровня ' + inv.level);
+    checkAchievements();
+}
+
+function buyBusiness(id) {
+    const biz = businesses.find(function(b) { return b.id === id; });
+    if (!biz || biz.level >= biz.maxLevel) return;
+    const cost = getCost(biz.baseCost, biz.level);
+    if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
+    game.balance -= cost; biz.level++;
+    recalcPassive(); saveGame(); updateUI();
+    showToast(biz.name + ' улучшен до уровня ' + biz.level);
+    checkAchievements();
+}
+
+function buyRealty(id) {
+    const r = realty.find(function(x) { return x.id === id; });
+    if (!r || r.level >= r.maxLevel) return;
+    const cost = getCost(r.baseCost, r.level);
+    if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
+    game.balance -= cost; r.level++;
+    recalcPassive(); saveGame(); updateUI();
+    showToast(r.name + ' улучшен до уровня ' + r.level);
+    checkAchievements();
+}
+
+function buyItem(id) {
+    const item = items.find(function(i) { return i.id === id; });
+    if (!item || item.owned) return;
+    if (game.balance < item.cost) { showToast('Недостаточно средств!'); return; }
+    game.balance -= item.cost; item.owned = true;
+    saveGame(); updateUI();
+    showToast('Куплено: ' + item.name + '!');
+    checkAchievements();
+    createStarBurst(window.innerWidth/2, window.innerHeight/2, 15);
+    createCoinRain(window.innerWidth/2, window.innerHeight/2);
+}
+
+function recalcPassive() {
+    let passive = 0;
+    investments.forEach(function(i) { passive += i.income * i.level; });
+    businesses.forEach(function(b) { passive += b.income * b.level; });
+    realty.forEach(function(r) { passive += r.income * r.level; });
+    game.passiveIncomePerHour = passive;
+
+    const indicator = document.getElementById('passiveIndicator');
+    if (passive > 0) {
+        const tax = calculateTaxDebt();
+        indicator.innerHTML = '💵 Пассивный доход: $' + formatMoney(passive) + '/час<br><span class="tax-info">Налог 18%: $' + formatMoney(tax) + '/24ч</span>';
+        indicator.style.display = 'block';
+    } else {
+        indicator.style.display = 'none';
+    }
+}
+
+// ==================== PASSIVE INCOME ====================
+setInterval(function() {
+    const debt = calculateTaxDebt();
+    const hoursPassed = game.taxTimer / 3600;
+    if (debt > 0 && hoursPassed >= 24) return;
+    if (game.passiveIncomePerHour > 0) {
+        const tickIncome = Math.floor(game.passiveIncomePerHour / 360);
+        if (tickIncome > 0) {
+            game.balance += tickIncome;
+            game.totalEarned += tickIncome;
+        }
+    }
+    updateUI();
+}, 10000);
+
+setInterval(updateTaxSystem, 1000);
+
+// ==================== RENDER ====================
+function renderInvestments() {
+    const list = document.getElementById('investmentsList');
+    list.innerHTML = investments.map(function(inv) {
+        const cost = getCost(inv.baseCost, inv.level);
+        const canAfford = game.balance >= cost;
+        const maxed = inv.level >= inv.maxLevel;
+        const income = inv.income * inv.level;
+        const taxPer24h = Math.floor(income * game.taxRate);
+        const hoursPassed = game.taxTimer / 3600;
+        const blocked = (taxPer24h > 0 && hoursPassed >= 24);
+
+        return '<div class="card invest-card ' + (blocked ? 'card-blocked' : '') + '">' +
+            '<div class="card-icon">' + inv.icon + '</div>' +
+            '<div class="card-info">' +
+                '<div class="card-name">' + inv.name + '</div>' +
+                '<div class="card-desc">' + inv.desc + '</div>' +
+                '<div class="card-income">+ $' + formatMoney(inv.income) + '/час ' + (income > 0 ? '(сейчас: $' + formatMoney(income) + '/час)' : '') + '</div>' +
+                (income > 0 ? '<div class="card-tax">Налог: $' + formatMoney(taxPer24h) + '/24ч</div>' : '') +
+                (blocked ? '<div class="card-tax">⚠️ Остановлено — оплатите налоги!</div>' : '') +
+            '</div>' +
+            '<button class="card-btn ' + (maxed ? 'maxed' : 'buy') + '" ' + (maxed || !canAfford ? 'disabled' : '') + ' onclick="buyInvestment(\'' + inv.id + '\')">' +
+                (maxed ? 'MAX' : '$' + formatShort(cost)) +
+            '</button>' +
+            '<div class="card-level">' + inv.level + '/' + inv.maxLevel + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function renderBusiness() {
+    const list = document.getElementById('businessList');
+    list.innerHTML = businesses.map(function(biz) {
+        const cost = getCost(biz.baseCost, biz.level);
+        const canAfford = game.balance >= cost;
+        const maxed = biz.level >= biz.maxLevel;
+        const income = biz.income * biz.level;
+        const taxPer24h = Math.floor(income * game.taxRate);
+        const hoursPassed = game.taxTimer / 3600;
+        const blocked = (taxPer24h > 0 && hoursPassed >= 24);
+
+        return '<div class="card biz-card ' + (blocked ? 'card-blocked' : '') + '">' +
+            '<div class="card-icon">' + biz.icon + '</div>' +
+            '<div class="card-info">' +
+                '<div class="card-name">' + biz.name + '</div>' +
+                '<div class="card-desc">' + biz.desc + '</div>' +
+                '<div class="card-income">+ $' + formatMoney(biz.income) + '/час ' + (income > 0 ? '(сейчас: $' + formatMoney(income) + '/час)' : '') + '</div>' +
+                (income > 0 ? '<div class="card-tax">Налог 18%: $' + formatMoney(taxPer24h) + '/24ч</div>' : '') +
+                (blocked ? '<div class="card-tax">⚠️ Остановлено — оплатите налоги!</div>' : '') +
+            '</div>' +
+            '<button class="card-btn ' + (maxed ? 'maxed' : 'buy') + '" ' + (maxed || !canAfford ? 'disabled' : '') + ' onclick="buyBusiness(\'' + biz.id + '\')">' +
+                (maxed ? 'MAX' : '$' + formatShort(cost)) +
+            '</button>' +
+            '<div class="card-level">' + biz.level + '/' + biz.maxLevel + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function renderRealty() {
+    const list = document.getElementById('realtyList');
+    list.innerHTML = realty.map(function(r) {
+        const cost = getCost(r.baseCost, r.level);
+        const canAfford = game.balance >= cost;
+        const maxed = r.level >= r.maxLevel;
+        const income = r.income * r.level;
+        const taxPer24h = Math.floor(income * game.taxRate);
+        const hoursPassed = game.taxTimer / 3600;
+        const blocked = (taxPer24h > 0 && hoursPassed >= 24);
+
+        return '<div class="card realty-card ' + (blocked ? 'card-blocked' : '') + '">' +
+            '<div class="card-icon">' + r.icon + '</div>' +
+            '<div class="card-info">' +
+                '<div class="card-name">' + r.name + '</div>' +
+                '<div class="card-desc">' + r.desc + '</div>' +
+                '<div class="card-income">+ $' + formatMoney(r.income) + '/час ' + (income > 0 ? '(сейчас: $' + formatMoney(income) + '/час)' : '') + '</div>' +
+                (income > 0 ? '<div class="card-tax">Налог 18%: $' + formatMoney(taxPer24h) + '/24ч</div>' : '') +
+                (blocked ? '<div class="card-tax">⚠️ Остановлено — оплатите налоги!</div>' : '') +
+            '</div>' +
+            '<button class="card-btn ' + (maxed ? 'maxed' : 'buy') + '" ' + (maxed || !canAfford ? 'disabled' : '') + ' onclick="buyRealty(\'' + r.id + '\')">' +
+                (maxed ? 'MAX' : '$' + formatShort(cost)) +
+            '</button>' +
+            '<div class="card-level">' + r.level + '/' + r.maxLevel + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function renderItems() {
+    const list = document.getElementById('itemsList');
+    list.innerHTML = items.map(function(item) {
+        const canAfford = game.balance >= item.cost;
+        return '<div class="card item-card">' +
+            '<div class="card-icon">' + item.icon + '</div>' +
+            '<div class="card-info">' +
+                '<div class="card-name">' + item.name + '</div>' +
+                '<div class="card-desc">' + item.desc + '</div>' +
+            '</div>' +
+            '<button class="card-btn ' + (item.owned ? 'maxed' : 'buy') + '" ' + (item.owned || !canAfford ? 'disabled' : '') + ' onclick="buyItem(\'' + item.id + '\')">' +
+                (item.owned ? '✓ Куплено' : '$' + formatShort(item.cost)) +
+            '</button>' +
+        '</div>';
+    }).join('');
+}
+
+function renderAchievements() {
+    const list = document.getElementById('achievementsList');
+    list.innerHTML = achievements.map(function(ach) {
+        return '<div class="card" style="opacity:' + (ach.unlocked ? 1 : 0.4) + '">' +
+            '<div class="card-icon" style="background:' + (ach.unlocked ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' : '#334155') + ';">' + ach.icon + '</div>' +
+            '<div class="card-info">' +
+                '<div class="card-name" style="color:' + (ach.unlocked ? '#fbbf24' : '#64748b') + '">' + ach.name + '</div>' +
+                '<div class="card-desc">' + ach.desc + '</div>' +
+            '</div>' +
+            (ach.unlocked ? '<span style="color:#4ade80;font-weight:700;font-size:13px;">✓ Получено</span>' : '') +
+        '</div>';
+    }).join('');
+}
+
+function checkAchievements() {
+    let newUnlock = false;
+    achievements.forEach(function(ach) {
+        if (!ach.unlocked && ach.condition()) {
+            ach.unlocked = true;
+            newUnlock = true;
+            showToast('🏆 Достижение: ' + ach.name);
+            createStarBurst(window.innerWidth/2, window.innerHeight/2, 15);
+        }
+    });
+    if (newUnlock) renderAchievements();
+}
+
+// ==================== UPDATE UI ====================
+function updateUI() {
+    const card = cards[game.cardLevel];
+    const nextCard = cards[game.cardLevel + 1];
+
+    document.getElementById('cardImg').textContent = card.icon;
+    document.getElementById('cardImg').style.background = 'linear-gradient(135deg, ' + card.color + ', ' + card.color + ')';
+    document.getElementById('cardImg').style.borderColor = card.color;
+    document.getElementById('cardName').textContent = card.name;
+    document.getElementById('cardDesc').textContent = card.desc;
+
+    const cardBtn = document.getElementById('cardBtn');
+    if (nextCard) {
+        cardBtn.textContent = '$' + formatShort(nextCard.cost);
+        cardBtn.disabled = game.balance < nextCard.cost;
+        cardBtn.className = 'card-upgrade-btn buy';
+    } else {
+        cardBtn.textContent = 'MAX';
+        cardBtn.disabled = true;
+        cardBtn.className = 'card-upgrade-btn maxed';
+    }
+
+    document.getElementById('balance').textContent = '$ ' + formatMoney(game.balance);
+
+    let pc = game.perClickBase;
+    if (game.adBoostActive) pc *= game.adBoostMultiplier;
+    pc = Math.floor(pc);
+    document.getElementById('perClick').textContent = '$ ' + formatMoney(pc);
+    document.getElementById('clickLvl').textContent = 'ур. ' + game.clickLevel + '/11';
+
+    const clickBtn = document.getElementById('clickUpgradeBtn');
+    if (game.clickLevel >= 11) {
+        clickBtn.textContent = 'MAX';
+        clickBtn.disabled = true;
+        clickBtn.className = 'click-upgrade-btn maxed';
+    } else {
+        const clickCost = game.clickUpgradeCosts[game.clickLevel - 1];
+        clickBtn.textContent = 'Улучшить $' + formatShort(clickCost);
+        clickBtn.disabled = game.balance < clickCost;
+        clickBtn.className = 'click-upgrade-btn buy';
+    }
+
+    document.getElementById('profileLevel').textContent = game.level;
+    document.getElementById('xpFill').style.width = (game.xp / game.xpToNext * 100) + '%';
+    document.getElementById('statClicks').textContent = formatShort(game.totalClicks);
+    document.getElementById('statBiz').textContent = businesses.filter(function(b) { return b.level > 0; }).length;
+    document.getElementById('statItems').textContent = items.filter(function(i) { return i.owned; }).length;
+    document.getElementById('statInvest').textContent = investments.filter(function(i) { return i.level > 0; }).length;
+    document.getElementById('statRealty').textContent = realty.filter(function(r) { return r.level > 0; }).length;
+    document.getElementById('statPassive').textContent = '$' + formatShort(game.passiveIncomePerHour) + '/ч';
+
+    const hasAffordableInv = investments.some(function(i) { return game.balance >= getCost(i.baseCost, i.level) && i.level < i.maxLevel; });
+    const hasAffordableBiz = businesses.some(function(b) { return game.balance >= getCost(b.baseCost, b.level) && b.level < b.maxLevel; });
+    const hasAffordableRealty = realty.some(function(r) { return game.balance >= getCost(r.baseCost, r.level) && r.level < r.maxLevel; });
+    const hasAffordableItem = items.some(function(i) { return game.balance >= i.cost && !i.owned; });
+
+    document.getElementById('badgeInvest').style.display = hasAffordableInv ? 'flex' : 'none';
+    document.getElementById('badgeBiz').style.display = hasAffordableBiz ? 'flex' : 'none';
+    document.getElementById('badgeRealty').style.display = hasAffordableRealty ? 'flex' : 'none';
+    document.getElementById('badgeItems').style.display = hasAffordableItem ? 'flex' : 'none';
+
+    renderInvestments();
+    renderBusiness();
+    renderRealty();
+    renderItems();
+}
+
+// ==================== TAB SWITCHING ====================
+function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelector('.nav-item[data-tab="' + tab + '"]').classList.add('active');
+
+    if (tab === 'profile') renderAchievements();
+}
+
+// ==================== INIT ====================
+updateUI();
+recalcPassive();
+
+// Create background decorations
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(createBgEmojis, 500);
+});
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(createBgEmojis, 500);
+}
+
+// Track pressed keys to prevent auto-repeat spam
+const pressedKeys = {};
+
+document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' && document.getElementById('tab-earn').classList.contains('active')) {
+        // Ignore if key is already held down (auto-repeat)
+        if (pressedKeys['Space']) {
+            e.preventDefault();
+            return;
+        }
+        pressedKeys['Space'] = true;
+        e.preventDefault();
+        const btn = document.getElementById('clickBtn');
+        const rect = btn.getBoundingClientRect();
+        handleClick({ clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2 });
+        btn.style.transform = 'scale(0.92)';
+        setTimeout(function() { btn.style.transform = ''; }, 100);
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    if (e.code === 'Space') {
+        pressedKeys['Space'] = false;
+    }
+});
+</script>
+</body>
+</html>
