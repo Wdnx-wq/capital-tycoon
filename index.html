@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Capital Tycoon</title>
+<title>Capital Tycoon — Telegram Mini App</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://yandex.ru/games/sdk/v2"></script>
 <style>
 /* ===== GLOBAL ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -488,6 +487,7 @@ body {
 }
 
 </style>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
 
@@ -524,12 +524,12 @@ body {
     <button class="click-upgrade-btn buy" id="clickUpgradeBtn" onclick="upgradeClick()">Улучшить $100</button>
 </div>
 
-<!-- AD BOOST (Yandex rewarded video) -->
-<div class="ad-boost" id="adBoost" onclick="showRewardedAd()">
-    <div class="ad-icon">▶</div>
+<!-- SUPPORT AUTHOR -->
+<div class="ad-boost" style="background: linear-gradient(90deg, rgba(236,72,153,0.15) 0%, rgba(244,114,182,0.05) 100%); border-color: rgba(236,72,153,0.2);" onclick="window.open('https://www.donationalerts.com/r/beanur', '_blank')">
+    <div class="ad-icon" style="background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);">❤️</div>
     <div class="ad-text">
-        <div class="ad-title" id="adTitle">Ускоритель x3</div>
-        <div class="ad-subtitle" id="adSubtitle">За просмотр рекламы — 30 сек.</div>
+        <div class="ad-title" style="color:#f472b6;">Поддержать автора</div>
+        <div class="ad-subtitle" style="color:#f9a8d4;">Помоги развитию игры — любая сумма важна!</div>
     </div>
 </div>
 
@@ -593,6 +593,15 @@ body {
         <div class="stat-box"><div class="stat-value" id="statRealty">0</div><div class="stat-label">Недвижимости</div></div>
         <div class="stat-box"><div class="stat-value" id="statPassive">$0/ч</div><div class="stat-label">Пассивный доход</div></div>
     </div>
+    <div class="section-title"><span></span>Поддержать автора</div>
+    <div class="card" style="cursor:pointer;" onclick="window.open('https://www.donationalerts.com/r/beanur', '_blank')">
+        <div class="card-icon" style="background:linear-gradient(135deg, #ec4899, #f472b6);">❤️</div>
+        <div class="card-info">
+            <div class="card-name" style="color:#f472b6;">Поддержать автора</div>
+            <div class="card-desc">Помоги развитию игры — любая сумма важна!</div>
+        </div>
+        <span style="color:#f472b6;font-weight:700;font-size:13px;">DonationAlerts →</span>
+    </div>
     <div class="section-title"><span></span>Достижения</div>
     <div id="achievementsList"></div>
 </div>
@@ -639,365 +648,28 @@ body {
 </div>
 
 <script>
-// ==================== PLATFORM DETECTION ====================
-const PLATFORM = {
-    YANDEX: 'yandex',
-    VK: 'vk',
-    STANDALONE: 'standalone'
-};
+// ==================== TELEGRAM WEB APP ====================
+let tg = null;
+let tgUser = null;
 
-let currentPlatform = PLATFORM.STANDALONE;
-let ysdk = null;
-let player = null;
-let adv = null;
-let vkBridge = null;
-let vkUser = null;
-
-// Detect platform
-function detectPlatform() {
-    // Check VK first (VK Mini Apps runs inside VK iframe with bridge)
-    if (window.vkBridge || (window.location.href.indexOf('vk_user_id') !== -1)) {
-        return PLATFORM.VK;
-    }
-    // Check Yandex
-    if (typeof YaGames !== 'undefined') {
-        return PLATFORM.YANDEX;
-    }
-    return PLATFORM.STANDALONE;
-}
-
-currentPlatform = detectPlatform();
-console.log('Platform detected:', currentPlatform);
-
-// ==================== VK BRIDGE INIT ====================
-function initVK() {
-    // Load VK Bridge if not present
-    if (!window.vkBridge) {
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
-        script.onload = function() {
-            vkBridge = window.vkBridge;
-            vkBridge.send('VKWebAppInit').then(function() {
-                console.log('VK Bridge initialized');
-                // Get user info
-                vkBridge.send('VKWebAppGetUserInfo').then(function(user) {
-                    vkUser = user;
-                    console.log('VK User:', user.first_name, user.last_name);
-                    document.querySelector('.profile-name').textContent = user.first_name;
-                    if (user.photo_100) {
-                        document.querySelector('.profile-avatar').innerHTML = '<img src="' + user.photo_100 + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
-                    }
-                }).catch(function(err) {
-                    console.log('VK GetUserInfo error:', err);
-                });
-                loadGameVK();
-            }).catch(function(err) {
-                console.log('VK Bridge init error:', err);
-                loadGame();
-            });
-        };
-        script.onerror = function() {
-            console.log('VK Bridge load failed');
-            loadGame();
-        };
-        document.head.appendChild(script);
-    } else {
-        vkBridge = window.vkBridge;
-        vkBridge.send('VKWebAppInit').then(function() {
-            vkBridge.send('VKWebAppGetUserInfo').then(function(user) {
-                vkUser = user;
-                document.querySelector('.profile-name').textContent = user.first_name;
-                if (user.photo_100) {
-                    document.querySelector('.profile-avatar').innerHTML = '<img src="' + user.photo_100 + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
-                }
-            }).catch(function(err) { console.log('VK user error:', err); });
-            loadGameVK();
-        }).catch(function(err) {
-            console.log('VK init error:', err);
-            loadGame();
-        });
-    }
-}
-
-// ==================== VK SAVE / LOAD ====================
-function saveGameVK() {
-    if (!vkBridge) return;
-    const saveData = buildSaveData();
-    vkBridge.send('VKWebAppStorageSet', {
-        key: 'capital_tycoon_save',
-        value: JSON.stringify(saveData)
-    }).then(function() {
-        console.log('VK save OK');
-    }).catch(function(err) {
-        console.log('VK save error:', err);
-        // Fallback to localStorage
-        localStorage.setItem('capital_tycoon_save', JSON.stringify(saveData));
-    });
-}
-
-function loadGameVK() {
-    if (!vkBridge) { loadGame(); return; }
-    vkBridge.send('VKWebAppStorageGet', {
-        keys: ['capital_tycoon_save']
-    }).then(function(data) {
-        if (data.keys && data.keys[0] && data.keys[0].value) {
-            try {
-                const parsed = JSON.parse(data.keys[0].value);
-                applySaveData(parsed);
-                showToast('Прогресс загружен из ВК!');
-            } catch(e) {
-                console.log('VK parse error:', e);
-                loadGame();
-            }
-        } else {
-            // Try localStorage fallback
-            const fallback = localStorage.getItem('capital_tycoon_save');
-            if (fallback) {
-                try {
-                    applySaveData(JSON.parse(fallback));
-                    showToast('Прогресс загружен!');
-                } catch(e) { loadGame(); }
-            } else {
-                loadGame();
-            }
+try {
+    tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+    tgUser = tg.initDataUnsafe.user;
+    if (tgUser) {
+        console.log('Telegram user:', tgUser.first_name, tgUser.last_name);
+        document.querySelector('.profile-name').textContent = tgUser.first_name || 'Игрок';
+        if (tgUser.photo_url) {
+            document.querySelector('.profile-avatar').innerHTML = '<img src="' + tgUser.photo_url + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
         }
-    }).catch(function(err) {
-        console.log('VK load error:', err);
-        loadGame();
-    });
-}
-
-// ==================== YANDEX GAMES SDK ====================
-function initYandex() {
-    YaGames.init({
-        adv: {
-            onAdvClose: function(wasShown) {
-                console.log('Adv closed, was shown:', wasShown);
-            }
-        }
-    }).then(function(_ysdk) {
-        ysdk = _ysdk;
-        adv = ysdk.adv;
-        ysdk.getPlayer({ scopes: false }).then(function(_player) {
-            player = _player;
-            console.log('Yandex Player initialized');
-            loadGame();
-        }).catch(function(err) {
-            console.log('Yandex Player init error:', err);
-            loadGame();
-        });
-        // Show fullscreen ad every 3 minutes
-        setInterval(function() {
-            if (adv) {
-                adv.showFullscreenAdv({
-                    callbacks: {
-                        onClose: function() { console.log('Fullscreen closed'); },
-                        onError: function(err) { console.log('Fullscreen error:', err); }
-                    }
-                });
-            }
-        }, 180000);
-    }).catch(function(err) {
-        console.log('Yandex SDK init error:', err);
-        loadGame();
-    });
-}
-
-// ==================== PLATFORM ROUTING ====================
-if (currentPlatform === PLATFORM.VK) {
-    initVK();
-} else if (currentPlatform === PLATFORM.YANDEX) {
-    initYandex();
-} else {
-    console.log('Standalone mode - using localStorage');
-    loadGame();
-}
-
-// ==================== KID-FRIENDLY VISUAL EFFECTS ====================
-
-// Background floating emojis
-function createBgEmojis() {
-    const emojis = ['💰', '💎', '⭐', '🪙', '💵', '✨', '🎯', '🚀'];
-    for (let i = 0; i < 8; i++) {
-        const el = document.createElement('div');
-        el.className = 'bg-emoji';
-        el.textContent = emojis[i];
-        el.style.left = (Math.random() * 90 + 5) + '%';
-        el.style.top = (Math.random() * 80 + 10) + '%';
-        el.style.animationDelay = (Math.random() * 20) + 's';
-        el.style.animationDuration = (15 + Math.random() * 10) + 's';
-        document.body.appendChild(el);
     }
+    tg.enableClosingConfirmation();
+} catch(e) {
+    console.log('Not in Telegram WebApp');
 }
 
-// Star burst effect
-function createStarBurst(x, y, count) {
-    const stars = ['⭐', '✨', '🌟', '💫', '⚡'];
-    for (let i = 0; i < count; i++) {
-        const star = document.createElement('div');
-        star.className = 'star-burst';
-        star.textContent = stars[Math.floor(Math.random() * stars.length)];
-        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
-        const dist = 40 + Math.random() * 60;
-        star.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
-        star.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
-        star.style.setProperty('--rot', (Math.random() * 360) + 'deg');
-        star.style.left = x + 'px';
-        star.style.top = y + 'px';
-        document.body.appendChild(star);
-        setTimeout(function() { star.remove(); }, 700);
-    }
-}
-
-// Coin rain effect
-function createCoinRain(x, y) {
-    const coins = ['💰', '🪙', '💵', '💎'];
-    for (let i = 0; i < 6; i++) {
-        setTimeout(function() {
-            const coin = document.createElement('div');
-            coin.className = 'coin-rain';
-            coin.textContent = coins[Math.floor(Math.random() * coins.length)];
-            coin.style.left = (x + (Math.random() - 0.5) * 80) + 'px';
-            coin.style.top = (y - 20) + 'px';
-            document.body.appendChild(coin);
-            setTimeout(function() { coin.remove(); }, 1200);
-        }, i * 80);
-    }
-}
-
-// Big money popup for combos
-function showBigMoneyPopup(x, y, amount, isCritical) {
-    const popup = document.createElement('div');
-    popup.className = 'big-money-popup';
-    if (isCritical) {
-        popup.innerHTML = '<span class="rainbow-text">💥 КРИТ! +' + formatMoney(amount) + '</span>';
-    } else {
-        popup.textContent = '+' + formatMoney(amount);
-    }
-    popup.style.left = (x - 50) + 'px';
-    popup.style.top = (y - 60) + 'px';
-    popup.style.color = isCritical ? '#fbbf24' : '#a78bfa';
-    document.body.appendChild(popup);
-    setTimeout(function() { popup.remove(); }, 800);
-}
-
-// Combo overlay
-function showComboOverlay(combo) {
-    const overlay = document.getElementById('comboOverlay');
-    const text = document.getElementById('comboText');
-    const labels = ['', 'COMBO!', 'COMBO x2!', 'COMBO x3!', 'COMBO x4!', 'COMBO x5!', 'COMBO x6!', 'COMBO x7!', 'COMBO x8!', 'COMBO x9!', 'MEGA COMBO x10!'];
-    text.textContent = labels[Math.min(combo, 10)] || 'SUPER COMBO!';
-    overlay.classList.add('show');
-    setTimeout(function() {
-        overlay.classList.remove('show');
-    }, 600);
-}
-
-// Screen shake
-function shakeScreen() {
-    document.body.style.animation = 'shake 0.3s ease-in-out';
-    setTimeout(function() {
-        document.body.style.animation = '';
-    }, 300);
-}
-
-// ==================== GAME STATE ====================
-const game = {
-    balance: 0,
-    perClickBase: 1,
-    clickLevel: 1,
-    clickUpgradeCosts: [150, 1200, 6000, 32000, 180000, 950000, 5200000, 28000000, 150000000, 850000000, Infinity],
-    level: 1,
-    xp: 0,
-    xpToNext: 100,
-    totalClicks: 0,
-    totalEarned: 0,
-    adBoostActive: false,
-    adBoostMultiplier: 3,
-    adBoostTimeLeft: 0,
-    passiveIncomePerHour: 0,
-    taxDebt: 0,
-    taxTimer: 0,
-    taxRate: 0.18,
-    cardLevel: 0,
-    netWorth: 0,
-    taxPaidCount: 0,
-    comboCount: 0,
-    comboTimer: null,
-    comboMultiplier: 1,
-    totalComboClicks: 0,
-    bestCombo: 0,
-    criticalHits: 0
-};
-
-const cards = [
-    { level: 0, name: 'Базовая карта', icon: '💳', desc: 'Бонус клика +0%', bonus: 1.0, color: '#64748b', cost: 0 },
-    { level: 1, name: 'Серебряная карта', icon: '🥈', desc: 'Бонус клика +25%', bonus: 1.25, color: '#94a3b8', cost: 15000 },
-    { level: 2, name: 'Золотая карта', icon: '🥇', desc: 'Бонус клика +60%', bonus: 1.6, color: '#fbbf24', cost: 150000 },
-    { level: 3, name: 'Платиновая карта', icon: '💎', desc: 'Бонус клика +120%', bonus: 2.2, color: '#a78bfa', cost: 1500000 },
-    { level: 4, name: 'Чёрная карта', icon: '🖤', desc: 'Бонус клика +250%', bonus: 3.5, color: '#1e293b', cost: 15000000 }
-];
-
-const investments = [
-    { id: 'inv1', name: 'Облигации Alpha', icon: '📜', desc: 'Надёжные гос. облигации', baseCost: 500, income: 10, level: 0, maxLevel: 50, color: '#fbbf24' },
-    { id: 'inv2', name: 'Акции TechCorp', icon: '💻', desc: 'Технологические акции', baseCost: 3500, income: 35, level: 0, maxLevel: 40, color: '#60a5fa' },
-    { id: 'inv3', name: 'Нефтяные фьючерсы', icon: '🛢️', desc: 'Сырьевые контракты', baseCost: 22000, income: 140, level: 0, maxLevel: 35, color: '#f59e0b' },
-    { id: 'inv4', name: 'Криптовалюта', icon: '₿', desc: 'Цифровые активы', baseCost: 150000, income: 550, level: 0, maxLevel: 30, color: '#a78bfa' },
-    { id: 'inv5', name: 'Венчурный фонд', icon: '🚀', desc: 'Стартап-инвестиции', baseCost: 950000, income: 2200, level: 0, maxLevel: 25, color: '#f472b6' },
-    { id: 'inv6', name: 'Хедж-фонд', icon: '📊', desc: 'Премиум инвестиции', baseCost: 6500000, income: 9500, level: 0, maxLevel: 20, color: '#34d399' },
-    { id: 'inv7', name: 'Частный банк', icon: '🏦', desc: 'Банковский капитал', baseCost: 45000000, income: 45000, level: 0, maxLevel: 15, color: '#6366f1' },
-    { id: 'inv8', name: 'Космическая корп.', icon: '🌌', desc: 'Межпланетный бизнес', baseCost: 320000000, income: 220000, level: 0, maxLevel: 10, color: '#ec4899' }
-];
-
-const businesses = [
-    { id: 'biz1', name: 'Ларёк с шаурмой', icon: '🥙', desc: 'Уличная еда', baseCost: 1200, income: 18, level: 0, maxLevel: 50, color: '#f59e0b' },
-    { id: 'biz2', name: 'Кофейня', icon: '☕', desc: 'Уютное кафе', baseCost: 8000, income: 60, level: 0, maxLevel: 45, color: '#a78bfa' },
-    { id: 'biz3', name: 'Магазин одежды', icon: '👕', desc: 'Розничная торговля', baseCost: 55000, income: 220, level: 0, maxLevel: 40, color: '#60a5fa' },
-    { id: 'biz4', name: 'Автосалон', icon: '🚗', desc: 'Продажа авто', baseCost: 350000, income: 850, level: 0, maxLevel: 35, color: '#34d399' },
-    { id: 'biz5', name: 'IT-студия', icon: '💡', desc: 'Разработка ПО', baseCost: 2200000, income: 3500, level: 0, maxLevel: 30, color: '#f472b6' },
-    { id: 'biz6', name: 'Отельная сеть', icon: '🏨', desc: 'Гостиничный бизнес', baseCost: 14000000, income: 16000, level: 0, maxLevel: 25, color: '#fbbf24' },
-    { id: 'biz7', name: 'Авиакомпания', icon: '✈️', desc: 'Международные рейсы', baseCost: 85000000, income: 75000, level: 0, maxLevel: 20, color: '#6366f1' },
-    { id: 'biz8', name: 'Космопорт', icon: '🚀', desc: 'Космический туризм', baseCost: 550000000, income: 400000, level: 0, maxLevel: 15, color: '#ec4899' }
-];
-
-const realty = [
-    { id: 'real1', name: 'Трущобы', icon: '🏚️', desc: 'Старый дом на окраине', baseCost: 2500, income: 30, level: 0, maxLevel: 30, color: '#78716c' },
-    { id: 'real2', name: 'Квартира-студия', icon: '🏠', desc: 'Компактное жильё', baseCost: 18000, income: 100, level: 0, maxLevel: 28, color: '#a8a29e' },
-    { id: 'real3', name: 'Таунхаус', icon: '🏘️', desc: 'Семейный дом', baseCost: 110000, income: 380, level: 0, maxLevel: 25, color: '#fbbf24' },
-    { id: 'real4', name: 'Пентхаус', icon: '🏢', desc: 'Люкс-апартаменты', baseCost: 750000, income: 1500, level: 0, maxLevel: 22, color: '#a78bfa' },
-    { id: 'real5', name: 'Вилла', icon: '🏰', desc: 'Особняк с бассейном', baseCost: 4800000, income: 6500, level: 0, maxLevel: 20, color: '#34d399' },
-    { id: 'real6', name: 'Отель 5★', icon: '🏨', desc: 'Премиум-отель', baseCost: 30000000, income: 30000, level: 0, maxLevel: 18, color: '#60a5fa' },
-    { id: 'real7', name: 'Небоскрёб', icon: '🌆', desc: 'Бизнес-центр', baseCost: 180000000, income: 150000, level: 0, maxLevel: 15, color: '#6366f1' },
-    { id: 'real8', name: 'Кинотеатр Лас-Вегаса', icon: '🎬', desc: 'Легендарный комплекс', baseCost: 1200000000, income: 800000, level: 0, maxLevel: 12, color: '#ec4899' }
-];
-
-const items = [
-    { id: 'item1', name: 'iPhone Pro', icon: '📱', desc: 'Флагманский смартфон', cost: 8000, owned: false },
-    { id: 'item2', name: 'MacBook Ultra', icon: '💻', desc: 'Профессиональный ноутбук', cost: 45000, owned: false },
-    { id: 'item3', name: 'Часы Rolex', icon: '⌚', desc: 'Швейцарские часы', cost: 180000, owned: false },
-    { id: 'item4', name: 'Яхта Azure', icon: '🛥️', desc: 'Люксовая яхта', cost: 950000, owned: false },
-    { id: 'item5', name: 'Lamborghini', icon: '🏎️', desc: 'Суперкар мечты', cost: 4500000, owned: false },
-    { id: 'item6', name: 'Вилла на берегу', icon: '🏖️', desc: 'Недвижимость премиум', cost: 25000000, owned: false },
-    { id: 'item7', name: 'Частный остров', icon: '🏝️', desc: 'Собственный остров', cost: 150000000, owned: false },
-    { id: 'item8', name: 'Космическая станция', icon: '🛰️', desc: 'Орбитальная база', cost: 1500000000, owned: false }
-];
-
-const achievements = [
-    { id: 'ach1', name: 'Первый клик', desc: 'Сделайте 1 клик', icon: '👆', condition: function() { return game.totalClicks >= 1; }, unlocked: false },
-    { id: 'ach2', name: 'Сотня кликов', desc: 'Сделайте 100 кликов', icon: '💯', condition: function() { return game.totalClicks >= 100; }, unlocked: false },
-    { id: 'ach3', name: 'Тысяча кликов', desc: 'Сделайте 1000 кликов', icon: '🔥', condition: function() { return game.totalClicks >= 1000; }, unlocked: false },
-    { id: 'ach4', name: 'Первый бизнес', desc: 'Купите первый бизнес', icon: '🏢', condition: function() { return businesses.some(function(b) { return b.level > 0; }); }, unlocked: false },
-    { id: 'ach5', name: 'Инвестор', desc: 'Сделайте первую инвестицию', icon: '📈', condition: function() { return investments.some(function(i) { return i.level > 0; }); }, unlocked: false },
-    { id: 'ach6', name: 'Миллионер', desc: 'Накопите $1,000,000', icon: '💎', condition: function() { return game.balance >= 1000000; }, unlocked: false },
-    { id: 'ach7', name: 'Миллиардер', desc: 'Накопите $1,000,000,000', icon: '👑', condition: function() { return game.balance >= 1000000000; }, unlocked: false },
-    { id: 'ach8', name: 'Коллекционер', desc: 'Купите 4 предмета роскоши', icon: '🎁', condition: function() { return items.filter(function(i) { return i.owned; }).length >= 4; }, unlocked: false },
-    { id: 'ach9', name: 'Землевладелец', desc: 'Купите первую недвижимость', icon: '🏠', condition: function() { return realty.some(function(r) { return r.level > 0; }); }, unlocked: false },
-    { id: 'ach10', name: 'Честный налогоплательщик', desc: 'Оплатите налоги 5 раз', icon: '📝', condition: function() { return game.taxPaidCount >= 5; }, unlocked: false },
-    { id: 'ach11', name: 'Комбо-мастер', desc: 'Достигните комбо x10', icon: '⚡', condition: function() { return game.bestCombo >= 10; }, unlocked: false },
-    { id: 'ach12', name: 'Критический удар', desc: 'Сделайте 50 критических ударов', icon: '💥', condition: function() { return game.criticalHits >= 50; }, unlocked: false }
-];
-
-// ==================== SAVE / LOAD ====================
+// ==================== SAVE / LOAD (Telegram CloudStorage) ====================
 function buildSaveData() {
     return {
         balance: game.balance,
@@ -1038,56 +710,49 @@ function applySaveData(data) {
 
     if (data.investments) {
         data.investments.forEach(function(saved) {
-            const inv = investments.find(function(i) { return i.id === saved.id; });
+            var inv = investments.find(function(i) { return i.id === saved.id; });
             if (inv) inv.level = saved.level || 0;
         });
     }
     if (data.businesses) {
         data.businesses.forEach(function(saved) {
-            const biz = businesses.find(function(b) { return b.id === saved.id; });
+            var biz = businesses.find(function(b) { return b.id === saved.id; });
             if (biz) biz.level = saved.level || 0;
         });
     }
     if (data.realty) {
         data.realty.forEach(function(saved) {
-            const r = realty.find(function(x) { return x.id === saved.id; });
+            var r = realty.find(function(x) { return x.id === saved.id; });
             if (r) r.level = saved.level || 0;
         });
     }
     if (data.items) {
         data.items.forEach(function(saved) {
-            const item = items.find(function(i) { return i.id === saved.id; });
+            var item = items.find(function(i) { return i.id === saved.id; });
             if (item) item.owned = saved.owned || false;
         });
     }
     if (data.achievements) {
         data.achievements.forEach(function(saved) {
-            const ach = achievements.find(function(a) { return a.id === saved.id; });
+            var ach = achievements.find(function(a) { return a.id === saved.id; });
             if (ach) ach.unlocked = saved.unlocked || false;
         });
     }
 }
 
 function saveGame() {
-    const saveData = buildSaveData();
-
-    // Yandex
-    if (currentPlatform === PLATFORM.YANDEX && player) {
-        player.setData(saveData).then(function() {
-            console.log('Yandex save OK');
-        }).catch(function(err) {
-            console.log('Yandex save error:', err);
+    var saveData = buildSaveData();
+    if (tg && tg.CloudStorage) {
+        tg.CloudStorage.setItem('capital_tycoon_save', JSON.stringify(saveData), function(err, saved) {
+            if (err) {
+                console.log('Telegram CloudStorage save error:', err);
+                try { localStorage.setItem('capital_tycoon_save', JSON.stringify(saveData)); } catch(e) {}
+            } else {
+                console.log('Telegram CloudStorage save OK');
+            }
         });
         return;
     }
-
-    // VK
-    if (currentPlatform === PLATFORM.VK && vkBridge) {
-        saveGameVK();
-        return;
-    }
-
-    // Standalone - localStorage
     try {
         localStorage.setItem('capital_tycoon_save', JSON.stringify(saveData));
         console.log('localStorage save OK');
@@ -1097,74 +762,224 @@ function saveGame() {
 }
 
 function loadGame() {
-    if (!player) {
-        updateUI();
-        return;
-    }
-
-    player.getData().then(function(data) {
-        if (data && Object.keys(data).length > 0) {
-            game.balance = data.balance || 0;
-            game.clickLevel = data.clickLevel || 1;
-            game.perClickBase = Math.pow(2, game.clickLevel - 1);
-            game.level = data.level || 1;
-            game.xp = data.xp || 0;
-            game.xpToNext = data.xpToNext || 100;
-            game.totalClicks = data.totalClicks || 0;
-            game.totalEarned = data.totalEarned || 0;
-            game.cardLevel = data.cardLevel || 0;
-            game.taxTimer = data.taxTimer || 0;
-            game.taxPaidCount = data.taxPaidCount || 0;
-            game.bestCombo = data.bestCombo || 0;
-            game.criticalHits = data.criticalHits || 0;
-
-            if (data.investments) {
-                data.investments.forEach(function(saved) {
-                    const inv = investments.find(function(i) { return i.id === saved.id; });
-                    if (inv) inv.level = saved.level || 0;
-                });
+    if (tg && tg.CloudStorage) {
+        tg.CloudStorage.getItem('capital_tycoon_save', function(err, value) {
+            if (!err && value) {
+                try {
+                    applySaveData(JSON.parse(value));
+                    showToast('Прогресс загружен из Telegram!');
+                } catch(e) {
+                    console.log('Telegram parse error:', e);
+                    loadGameLocal();
+                }
+            } else {
+                loadGameLocal();
             }
-            if (data.businesses) {
-                data.businesses.forEach(function(saved) {
-                    const biz = businesses.find(function(b) { return b.id === saved.id; });
-                    if (biz) biz.level = saved.level || 0;
-                });
-            }
-            if (data.realty) {
-                data.realty.forEach(function(saved) {
-                    const r = realty.find(function(x) { return x.id === saved.id; });
-                    if (r) r.level = saved.level || 0;
-                });
-            }
-            if (data.items) {
-                data.items.forEach(function(saved) {
-                    const item = items.find(function(i) { return i.id === saved.id; });
-                    if (item) item.owned = saved.owned || false;
-                });
-            }
-            if (data.achievements) {
-                data.achievements.forEach(function(saved) {
-                    const ach = achievements.find(function(a) { return a.id === saved.id; });
-                    if (ach) ach.unlocked = saved.unlocked || false;
-                });
-            }
-
-            showToast('Прогресс загружен!');
-        }
+            recalcPassive();
+            updateUI();
+            createBgEmojis();
+        });
+    } else {
+        loadGameLocal();
         recalcPassive();
         updateUI();
         createBgEmojis();
-    }).catch(function(err) {
-        console.log('Load error:', err);
-        updateUI();
-        createBgEmojis();
-    });
+    }
 }
 
-// Auto-save every 30 seconds
+function loadGameLocal() {
+    try {
+        var saved = localStorage.getItem('capital_tycoon_save');
+        if (saved) {
+            applySaveData(JSON.parse(saved));
+            showToast('Прогресс загружен!');
+        }
+    } catch(e) {
+        console.log('localStorage load error:', e);
+    }
+}
+
 setInterval(function() {
     saveGame();
 }, 30000);
+
+// ==================== KID-FRIENDLY VISUAL EFFECTS ====================
+
+function createBgEmojis() {
+    var emojis = ['💰', '💎', '⭐', '🪙', '💵', '✨', '🎯', '🚀'];
+    for (var i = 0; i < 8; i++) {
+        var el = document.createElement('div');
+        el.className = 'bg-emoji';
+        el.textContent = emojis[i];
+        el.style.left = (Math.random() * 90 + 5) + '%';
+        el.style.top = (Math.random() * 80 + 10) + '%';
+        el.style.animationDelay = (Math.random() * 20) + 's';
+        el.style.animationDuration = (15 + Math.random() * 10) + 's';
+        document.body.appendChild(el);
+    }
+}
+
+function createStarBurst(x, y, count) {
+    var stars = ['⭐', '✨', '🌟', '💫', '⚡'];
+    for (var i = 0; i < count; i++) {
+        var star = document.createElement('div');
+        star.className = 'star-burst';
+        star.textContent = stars[Math.floor(Math.random() * stars.length)];
+        var angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+        var dist = 40 + Math.random() * 60;
+        star.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+        star.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+        star.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+        star.style.left = x + 'px';
+        star.style.top = y + 'px';
+        document.body.appendChild(star);
+        setTimeout(function() { star.remove(); }, 700);
+    }
+}
+
+function createCoinRain(x, y) {
+    var coins = ['💰', '🪙', '💵', '💎'];
+    for (var i = 0; i < 6; i++) {
+        setTimeout(function() {
+            var coin = document.createElement('div');
+            coin.className = 'coin-rain';
+            coin.textContent = coins[Math.floor(Math.random() * coins.length)];
+            coin.style.left = (x + (Math.random() - 0.5) * 80) + 'px';
+            coin.style.top = (y - 20) + 'px';
+            document.body.appendChild(coin);
+            setTimeout(function() { coin.remove(); }, 1200);
+        }, i * 80);
+    }
+}
+
+function showBigMoneyPopup(x, y, amount, isCritical) {
+    var popup = document.createElement('div');
+    popup.className = 'big-money-popup';
+    if (isCritical) {
+        popup.innerHTML = '<span class="rainbow-text">💥 КРИТ! +' + formatMoney(amount) + '</span>';
+    } else {
+        popup.textContent = '+' + formatMoney(amount);
+    }
+    popup.style.left = (x - 50) + 'px';
+    popup.style.top = (y - 60) + 'px';
+    popup.style.color = isCritical ? '#fbbf24' : '#a78bfa';
+    document.body.appendChild(popup);
+    setTimeout(function() { popup.remove(); }, 800);
+}
+
+function showComboOverlay(combo) {
+    var overlay = document.getElementById('comboOverlay');
+    var text = document.getElementById('comboText');
+    var labels = ['', 'COMBO!', 'COMBO x2!', 'COMBO x3!', 'COMBO x4!', 'COMBO x5!', 'COMBO x6!', 'COMBO x7!', 'COMBO x8!', 'COMBO x9!', 'MEGA COMBO x10!'];
+    text.textContent = labels[Math.min(combo, 10)] || 'SUPER COMBO!';
+    overlay.classList.add('show');
+    setTimeout(function() {
+        overlay.classList.remove('show');
+    }, 600);
+}
+
+function shakeScreen() {
+    document.body.style.animation = 'shake 0.3s ease-in-out';
+    setTimeout(function() {
+        document.body.style.animation = '';
+    }, 300);
+}
+
+// ==================== GAME STATE ====================
+var game = {
+    balance: 0,
+    perClickBase: 1,
+    clickLevel: 1,
+    clickUpgradeCosts: [150, 1200, 6000, 32000, 180000, 950000, 5200000, 28000000, 150000000, 850000000, Infinity],
+    level: 1,
+    xp: 0,
+    xpToNext: 100,
+    totalClicks: 0,
+    totalEarned: 0,
+    adBoostActive: false,
+    adBoostMultiplier: 3,
+    adBoostTimeLeft: 0,
+    passiveIncomePerHour: 0,
+    taxDebt: 0,
+    taxTimer: 0,
+    taxRate: 0.18,
+    cardLevel: 0,
+    netWorth: 0,
+    taxPaidCount: 0,
+    comboCount: 0,
+    comboTimer: null,
+    comboMultiplier: 1,
+    totalComboClicks: 0,
+    bestCombo: 0,
+    criticalHits: 0
+};
+
+var cards = [
+    { level: 0, name: 'Базовая карта', icon: '💳', desc: 'Бонус клика +0%', bonus: 1.0, color: '#64748b', cost: 0 },
+    { level: 1, name: 'Серебряная карта', icon: '🥈', desc: 'Бонус клика +25%', bonus: 1.25, color: '#94a3b8', cost: 15000 },
+    { level: 2, name: 'Золотая карта', icon: '🥇', desc: 'Бонус клика +60%', bonus: 1.6, color: '#fbbf24', cost: 150000 },
+    { level: 3, name: 'Платиновая карта', icon: '💎', desc: 'Бонус клика +120%', bonus: 2.2, color: '#a78bfa', cost: 1500000 },
+    { level: 4, name: 'Чёрная карта', icon: '🖤', desc: 'Бонус клика +250%', bonus: 3.5, color: '#1e293b', cost: 15000000 }
+];
+
+var investments = [
+    { id: 'inv1', name: 'Облигации Alpha', icon: '📜', desc: 'Надёжные гос. облигации', baseCost: 500, income: 10, level: 0, maxLevel: 50, color: '#fbbf24' },
+    { id: 'inv2', name: 'Акции TechCorp', icon: '💻', desc: 'Технологические акции', baseCost: 3500, income: 35, level: 0, maxLevel: 40, color: '#60a5fa' },
+    { id: 'inv3', name: 'Нефтяные фьючерсы', icon: '🛢️', desc: 'Сырьевые контракты', baseCost: 22000, income: 140, level: 0, maxLevel: 35, color: '#f59e0b' },
+    { id: 'inv4', name: 'Криптовалюта', icon: '₿', desc: 'Цифровые активы', baseCost: 150000, income: 550, level: 0, maxLevel: 30, color: '#a78bfa' },
+    { id: 'inv5', name: 'Венчурный фонд', icon: '🚀', desc: 'Стартап-инвестиции', baseCost: 950000, income: 2200, level: 0, maxLevel: 25, color: '#f472b6' },
+    { id: 'inv6', name: 'Хедж-фонд', icon: '📊', desc: 'Премиум инвестиции', baseCost: 6500000, income: 9500, level: 0, maxLevel: 20, color: '#34d399' },
+    { id: 'inv7', name: 'Частный банк', icon: '🏦', desc: 'Банковский капитал', baseCost: 45000000, income: 45000, level: 0, maxLevel: 15, color: '#6366f1' },
+    { id: 'inv8', name: 'Космическая корп.', icon: '🌌', desc: 'Межпланетный бизнес', baseCost: 320000000, income: 220000, level: 0, maxLevel: 10, color: '#ec4899' }
+];
+
+var businesses = [
+    { id: 'biz1', name: 'Ларёк с шаурмой', icon: '🥙', desc: 'Уличная еда', baseCost: 1200, income: 18, level: 0, maxLevel: 50, color: '#f59e0b' },
+    { id: 'biz2', name: 'Кофейня', icon: '☕', desc: 'Уютное кафе', baseCost: 8000, income: 60, level: 0, maxLevel: 45, color: '#a78bfa' },
+    { id: 'biz3', name: 'Магазин одежды', icon: '👕', desc: 'Розничная торговля', baseCost: 55000, income: 220, level: 0, maxLevel: 40, color: '#60a5fa' },
+    { id: 'biz4', name: 'Автосалон', icon: '🚗', desc: 'Продажа авто', baseCost: 350000, income: 850, level: 0, maxLevel: 35, color: '#34d399' },
+    { id: 'biz5', name: 'IT-студия', icon: '💡', desc: 'Разработка ПО', baseCost: 2200000, income: 3500, level: 0, maxLevel: 30, color: '#f472b6' },
+    { id: 'biz6', name: 'Отельная сеть', icon: '🏨', desc: 'Гостиничный бизнес', baseCost: 14000000, income: 16000, level: 0, maxLevel: 25, color: '#fbbf24' },
+    { id: 'biz7', name: 'Авиакомпания', icon: '✈️', desc: 'Международные рейсы', baseCost: 85000000, income: 75000, level: 0, maxLevel: 20, color: '#6366f1' },
+    { id: 'biz8', name: 'Космопорт', icon: '🚀', desc: 'Космический туризм', baseCost: 550000000, income: 400000, level: 0, maxLevel: 15, color: '#ec4899' }
+];
+
+var realty = [
+    { id: 'real1', name: 'Трущобы', icon: '🏚️', desc: 'Старый дом на окраине', baseCost: 2500, income: 30, level: 0, maxLevel: 30, color: '#78716c' },
+    { id: 'real2', name: 'Квартира-студия', icon: '🏠', desc: 'Компактное жильё', baseCost: 18000, income: 100, level: 0, maxLevel: 28, color: '#a8a29e' },
+    { id: 'real3', name: 'Таунхаус', icon: '🏘️', desc: 'Семейный дом', baseCost: 110000, income: 380, level: 0, maxLevel: 25, color: '#fbbf24' },
+    { id: 'real4', name: 'Пентхаус', icon: '🏢', desc: 'Люкс-апартаменты', baseCost: 750000, income: 1500, level: 0, maxLevel: 22, color: '#a78bfa' },
+    { id: 'real5', name: 'Вилла', icon: '🏰', desc: 'Особняк с бассейном', baseCost: 4800000, income: 6500, level: 0, maxLevel: 20, color: '#34d399' },
+    { id: 'real6', name: 'Отель 5★', icon: '🏨', desc: 'Премиум-отель', baseCost: 30000000, income: 30000, level: 0, maxLevel: 18, color: '#60a5fa' },
+    { id: 'real7', name: 'Небоскрёб', icon: '🌆', desc: 'Бизнес-центр', baseCost: 180000000, income: 150000, level: 0, maxLevel: 15, color: '#6366f1' },
+    { id: 'real8', name: 'Кинотеатр Лас-Вегаса', icon: '🎬', desc: 'Легендарный комплекс', baseCost: 1200000000, income: 800000, level: 0, maxLevel: 12, color: '#ec4899' }
+];
+
+var items = [
+    { id: 'item1', name: 'iPhone Pro', icon: '📱', desc: 'Флагманский смартфон', cost: 8000, owned: false },
+    { id: 'item2', name: 'MacBook Ultra', icon: '💻', desc: 'Профессиональный ноутбук', cost: 45000, owned: false },
+    { id: 'item3', name: 'Часы Rolex', icon: '⌚', desc: 'Швейцарские часы', cost: 180000, owned: false },
+    { id: 'item4', name: 'Яхта Azure', icon: '🛥️', desc: 'Люксовая яхта', cost: 950000, owned: false },
+    { id: 'item5', name: 'Lamborghini', icon: '🏎️', desc: 'Суперкар мечты', cost: 4500000, owned: false },
+    { id: 'item6', name: 'Вилла на берегу', icon: '🏖️', desc: 'Недвижимость премиум', cost: 25000000, owned: false },
+    { id: 'item7', name: 'Частный остров', icon: '🏝️', desc: 'Собственный остров', cost: 150000000, owned: false },
+    { id: 'item8', name: 'Космическая станция', icon: '🛰️', desc: 'Орбитальная база', cost: 1500000000, owned: false }
+];
+
+var achievements = [
+    { id: 'ach1', name: 'Первый клик', desc: 'Сделайте 1 клик', icon: '👆', condition: function() { return game.totalClicks >= 1; }, unlocked: false },
+    { id: 'ach2', name: 'Сотня кликов', desc: 'Сделайте 100 кликов', icon: '💯', condition: function() { return game.totalClicks >= 100; }, unlocked: false },
+    { id: 'ach3', name: 'Тысяча кликов', desc: 'Сделайте 1000 кликов', icon: '🔥', condition: function() { return game.totalClicks >= 1000; }, unlocked: false },
+    { id: 'ach4', name: 'Первый бизнес', desc: 'Купите первый бизнес', icon: '🏢', condition: function() { return businesses.some(function(b) { return b.level > 0; }); }, unlocked: false },
+    { id: 'ach5', name: 'Инвестор', desc: 'Сделайте первую инвестицию', icon: '📈', condition: function() { return investments.some(function(i) { return i.level > 0; }); }, unlocked: false },
+    { id: 'ach6', name: 'Миллионер', desc: 'Накопите $1,000,000', icon: '💎', condition: function() { return game.balance >= 1000000; }, unlocked: false },
+    { id: 'ach7', name: 'Миллиардер', desc: 'Накопите $1,000,000,000', icon: '👑', condition: function() { return game.balance >= 1000000000; }, unlocked: false },
+    { id: 'ach8', name: 'Коллекционер', desc: 'Купите 4 предмета роскоши', icon: '🎁', condition: function() { return items.filter(function(i) { return i.owned; }).length >= 4; }, unlocked: false },
+    { id: 'ach9', name: 'Землевладелец', desc: 'Купите первую недвижимость', icon: '🏠', condition: function() { return realty.some(function(r) { return r.level > 0; }); }, unlocked: false },
+    { id: 'ach10', name: 'Честный налогоплательщик', desc: 'Оплатите налоги 5 раз', icon: '📝', condition: function() { return game.taxPaidCount >= 5; }, unlocked: false },
+    { id: 'ach11', name: 'Комбо-мастер', desc: 'Достигните комбо x10', icon: '⚡', condition: function() { return game.bestCombo >= 10; }, unlocked: false },
+    { id: 'ach12', name: 'Критический удар', desc: 'Сделайте 50 критических ударов', icon: '💥', condition: function() { return game.criticalHits >= 50; }, unlocked: false }
+];
 
 // ==================== UTILS ====================
 function formatMoney(n) {
@@ -1189,7 +1004,7 @@ function getCost(baseCost, level) {
 }
 
 function showToast(msg) {
-    const t = document.getElementById('toast');
+    var t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(function() { t.classList.remove('show'); }, 2000);
@@ -1200,13 +1015,11 @@ function handleClick(e) {
     game.totalClicks++;
     game.totalComboClicks++;
 
-    // Combo system
     game.comboCount++;
     if (game.comboCount > game.bestCombo) {
         game.bestCombo = game.comboCount;
     }
 
-    // Combo multiplier: every 3 clicks = x2, every 5 = x3, etc.
     if (game.comboCount >= 10) {
         game.comboMultiplier = 4;
     } else if (game.comboCount >= 7) {
@@ -1217,23 +1030,20 @@ function handleClick(e) {
         game.comboMultiplier = 1;
     }
 
-    // Show combo overlay at milestones
     if (game.comboCount === 3 || game.comboCount === 5 || game.comboCount === 7 || game.comboCount === 10) {
         showComboOverlay(game.comboCount);
     }
 
-    // Reset combo timer
     if (game.comboTimer) clearTimeout(game.comboTimer);
     game.comboTimer = setTimeout(function() {
         game.comboCount = 0;
         game.comboMultiplier = 1;
     }, 2000);
 
-    // Critical hit chance (5%)
-    const isCritical = Math.random() < 0.05;
+    var isCritical = Math.random() < 0.05;
     if (isCritical) game.criticalHits++;
 
-    let earned = game.perClickBase;
+    var earned = game.perClickBase;
     if (game.adBoostActive) earned *= game.adBoostMultiplier;
     earned *= game.comboMultiplier;
     if (isCritical) earned *= 5;
@@ -1247,11 +1057,10 @@ function handleClick(e) {
     checkLevelUp();
     checkAchievements();
 
-    const cx = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth/2);
-    const cy = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : window.innerHeight/2);
+    var cx = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth/2);
+    var cy = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : window.innerHeight/2);
 
-    // Floating number
-    const float = document.createElement('div');
+    var float = document.createElement('div');
     float.className = 'float-num';
     if (isCritical) {
         float.innerHTML = '<span class="rainbow-text">💥 +' + formatMoney(earned) + '</span>';
@@ -1267,33 +1076,29 @@ function handleClick(e) {
     document.body.appendChild(float);
     setTimeout(function() { float.remove(); }, 1000);
 
-    // Star burst
-    let starCount = 4;
+    var starCount = 4;
     if (game.comboMultiplier > 1) starCount = 8;
     if (isCritical) starCount = 15;
     createStarBurst(cx, cy, starCount);
 
-    // Coin rain for combos/criticals
     if (game.comboMultiplier >= 3 || isCritical) {
         createCoinRain(cx, cy);
     }
 
-    // Big popup for critical
     if (isCritical) {
         showBigMoneyPopup(cx, cy, earned, true);
         shakeScreen();
     }
 
-    // Particles
-    const particleCount = isCritical ? 20 : (game.comboMultiplier > 1 ? 10 : 4);
-    for (let i = 0; i < particleCount; i++) {
-        const p = document.createElement('div');
+    var particleCount = isCritical ? 20 : (game.comboMultiplier > 1 ? 10 : 4);
+    for (var i = 0; i < particleCount; i++) {
+        var p = document.createElement('div');
         p.className = 'particle';
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 30 + Math.random() * 60;
+        var angle = Math.random() * Math.PI * 2;
+        var dist = 30 + Math.random() * 60;
         p.style.left = cx + 'px';
         p.style.top = cy + 'px';
-        const colors = ['#a78bfa', '#6366f1', '#8b5cf6', '#c4b5fd', '#fbbf24', '#f472b6'];
+        var colors = ['#a78bfa', '#6366f1', '#8b5cf6', '#c4b5fd', '#fbbf24', '#f472b6'];
         p.style.background = colors[Math.floor(Math.random() * colors.length)];
         p.style.width = (3 + Math.random() * 5) + 'px';
         p.style.height = p.style.width;
@@ -1309,7 +1114,7 @@ function handleClick(e) {
 // ==================== CLICK UPGRADE ====================
 function upgradeClick() {
     if (game.clickLevel >= 11) return;
-    const cost = game.clickUpgradeCosts[game.clickLevel - 1];
+    var cost = game.clickUpgradeCosts[game.clickLevel - 1];
     if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
     game.balance -= cost;
     game.clickLevel++;
@@ -1322,7 +1127,7 @@ function upgradeClick() {
 
 // ==================== CARD UPGRADE ====================
 function upgradeCard() {
-    const nextCard = cards[game.cardLevel + 1];
+    var nextCard = cards[game.cardLevel + 1];
     if (!nextCard) return;
     if (game.balance < nextCard.cost) { showToast('Недостаточно средств!'); return; }
     game.balance -= nextCard.cost;
@@ -1334,80 +1139,9 @@ function upgradeCard() {
     shakeScreen();
 }
 
-// ==================== YANDEX REWARDED AD ====================
-function showRewardedAd() {
-    // VK ads
-    if (currentPlatform === PLATFORM.VK && vkBridge) {
-        vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' }).then(function(result) {
-            if (result.result) {
-                activateLocalBoost();
-            }
-        }).catch(function(err) {
-            console.log('VK ad error:', err);
-            showToast('Реклама недоступна. Ускоритель активирован!');
-            activateLocalBoost();
-        });
-        return;
-    }
-
-    // Yandex ads
-    if (adv) {
-        adv.showRewardedVideo({
-            callbacks: {
-                onOpen: function() {
-                    console.log('Rewarded video opened');
-                },
-                onRewarded: function() {
-                    console.log('Rewarded!');
-                    activateLocalBoost();
-                },
-                onClose: function() {
-                    console.log('Rewarded video closed');
-                },
-                onError: function(err) {
-                    console.log('Rewarded video error:', err);
-                    showToast('Ошибка загрузки рекламы');
-                }
-            }
-        });
-        return;
-    }
-
-    // Fallback
-    showToast('Реклама недоступна. Ускоритель активирован!');
-    activateLocalBoost();
-}
-
-function activateLocalBoost() {
-    if (game.adBoostActive) return;
-    game.adBoostActive = true;
-    game.adBoostTimeLeft = 30;
-
-    const btn = document.getElementById('adBoost');
-    btn.classList.add('active');
-
-    const interval = setInterval(function() {
-        game.adBoostTimeLeft--;
-        document.getElementById('adTitle').textContent = 'Ускоритель x3 активен!';
-        document.getElementById('adSubtitle').textContent = game.adBoostTimeLeft + ' сек. осталось';
-
-        if (game.adBoostTimeLeft <= 0) {
-            clearInterval(interval);
-            game.adBoostActive = false;
-            btn.classList.remove('active');
-            document.getElementById('adTitle').textContent = 'Ускоритель x3';
-            document.getElementById('adSubtitle').textContent = 'За просмотр рекламы — 30 сек.';
-            showToast('Ускоритель закончился!');
-        }
-    }, 1000);
-
-    showToast('Ускоритель x3 активирован!');
-    createStarBurst(window.innerWidth/2, window.innerHeight/2, 20);
-}
-
 // ==================== TAX SYSTEM ====================
 function calculateTaxDebt() {
-    let totalIncome = 0;
+    var totalIncome = 0;
     businesses.forEach(function(b) { totalIncome += b.income * b.level; });
     investments.forEach(function(i) { totalIncome += i.income * i.level; });
     realty.forEach(function(r) { totalIncome += r.income * r.level; });
@@ -1415,7 +1149,7 @@ function calculateTaxDebt() {
 }
 
 function payTaxes() {
-    const debt = calculateTaxDebt();
+    var debt = calculateTaxDebt();
     if (debt <= 0) { showToast('Налоги не начислены — купите бизнес!'); return; }
     if (game.balance < debt) { showToast('Недостаточно средств! Нужно: $' + formatMoney(debt)); return; }
     game.balance -= debt;
@@ -1430,16 +1164,16 @@ function payTaxes() {
 
 function updateTaxSystem() {
     game.taxTimer++;
-    const hoursPassed = game.taxTimer / 3600;
-    const debt = calculateTaxDebt();
+    var hoursPassed = game.taxTimer / 3600;
+    var debt = calculateTaxDebt();
     game.taxDebt = debt;
 
-    const warning = document.getElementById('taxWarning');
-    const warningText = document.getElementById('taxWarningText');
-    const payBtn = document.getElementById('taxPayBtn');
+    var warning = document.getElementById('taxWarning');
+    var warningText = document.getElementById('taxWarningText');
+    var payBtn = document.getElementById('taxPayBtn');
 
     if (debt > 0) {
-        const hoursLeft = Math.max(0, 24 - hoursPassed);
+        var hoursLeft = Math.max(0, 24 - hoursPassed);
         if (hoursLeft <= 24 && hoursLeft > 0) {
             warning.classList.add('show');
             warningText.textContent = 'Налоги: $' + formatMoney(debt) + ' | Оплатите через ' + Math.floor(hoursLeft) + 'ч ' + Math.floor((hoursLeft % 1) * 60) + 'м';
@@ -1460,7 +1194,7 @@ function checkLevelUp() {
         game.xp -= game.xpToNext;
         game.level++;
         game.xpToNext = Math.floor(game.xpToNext * 1.5);
-        const reward = game.level * 50;
+        var reward = game.level * 50;
         game.balance += reward;
         document.getElementById('newLevel').textContent = game.level;
         document.getElementById('levelReward').textContent = '$' + formatMoney(reward);
@@ -1477,9 +1211,9 @@ function closeLevelUp() {
 
 // ==================== BUY MECHANICS ====================
 function buyInvestment(id) {
-    const inv = investments.find(function(i) { return i.id === id; });
+    var inv = investments.find(function(i) { return i.id === id; });
     if (!inv || inv.level >= inv.maxLevel) return;
-    const cost = getCost(inv.baseCost, inv.level);
+    var cost = getCost(inv.baseCost, inv.level);
     if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
     game.balance -= cost; inv.level++;
     recalcPassive(); saveGame(); updateUI();
@@ -1488,9 +1222,9 @@ function buyInvestment(id) {
 }
 
 function buyBusiness(id) {
-    const biz = businesses.find(function(b) { return b.id === id; });
+    var biz = businesses.find(function(b) { return b.id === id; });
     if (!biz || biz.level >= biz.maxLevel) return;
-    const cost = getCost(biz.baseCost, biz.level);
+    var cost = getCost(biz.baseCost, biz.level);
     if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
     game.balance -= cost; biz.level++;
     recalcPassive(); saveGame(); updateUI();
@@ -1499,9 +1233,9 @@ function buyBusiness(id) {
 }
 
 function buyRealty(id) {
-    const r = realty.find(function(x) { return x.id === id; });
+    var r = realty.find(function(x) { return x.id === id; });
     if (!r || r.level >= r.maxLevel) return;
-    const cost = getCost(r.baseCost, r.level);
+    var cost = getCost(r.baseCost, r.level);
     if (game.balance < cost) { showToast('Недостаточно средств!'); return; }
     game.balance -= cost; r.level++;
     recalcPassive(); saveGame(); updateUI();
@@ -1510,7 +1244,7 @@ function buyRealty(id) {
 }
 
 function buyItem(id) {
-    const item = items.find(function(i) { return i.id === id; });
+    var item = items.find(function(i) { return i.id === id; });
     if (!item || item.owned) return;
     if (game.balance < item.cost) { showToast('Недостаточно средств!'); return; }
     game.balance -= item.cost; item.owned = true;
@@ -1522,15 +1256,15 @@ function buyItem(id) {
 }
 
 function recalcPassive() {
-    let passive = 0;
+    var passive = 0;
     investments.forEach(function(i) { passive += i.income * i.level; });
     businesses.forEach(function(b) { passive += b.income * b.level; });
     realty.forEach(function(r) { passive += r.income * r.level; });
     game.passiveIncomePerHour = passive;
 
-    const indicator = document.getElementById('passiveIndicator');
+    var indicator = document.getElementById('passiveIndicator');
     if (passive > 0) {
-        const tax = calculateTaxDebt();
+        var tax = calculateTaxDebt();
         indicator.innerHTML = '💵 Пассивный доход: $' + formatMoney(passive) + '/час<br><span class="tax-info">Налог 18%: $' + formatMoney(tax) + '/24ч</span>';
         indicator.style.display = 'block';
     } else {
@@ -1540,11 +1274,11 @@ function recalcPassive() {
 
 // ==================== PASSIVE INCOME ====================
 setInterval(function() {
-    const debt = calculateTaxDebt();
-    const hoursPassed = game.taxTimer / 3600;
+    var debt = calculateTaxDebt();
+    var hoursPassed = game.taxTimer / 3600;
     if (debt > 0 && hoursPassed >= 24) return;
     if (game.passiveIncomePerHour > 0) {
-        const tickIncome = Math.floor(game.passiveIncomePerHour / 360);
+        var tickIncome = Math.floor(game.passiveIncomePerHour / 360);
         if (tickIncome > 0) {
             game.balance += tickIncome;
             game.totalEarned += tickIncome;
@@ -1557,15 +1291,15 @@ setInterval(updateTaxSystem, 1000);
 
 // ==================== RENDER ====================
 function renderInvestments() {
-    const list = document.getElementById('investmentsList');
+    var list = document.getElementById('investmentsList');
     list.innerHTML = investments.map(function(inv) {
-        const cost = getCost(inv.baseCost, inv.level);
-        const canAfford = game.balance >= cost;
-        const maxed = inv.level >= inv.maxLevel;
-        const income = inv.income * inv.level;
-        const taxPer24h = Math.floor(income * game.taxRate);
-        const hoursPassed = game.taxTimer / 3600;
-        const blocked = (taxPer24h > 0 && hoursPassed >= 24);
+        var cost = getCost(inv.baseCost, inv.level);
+        var canAfford = game.balance >= cost;
+        var maxed = inv.level >= inv.maxLevel;
+        var income = inv.income * inv.level;
+        var taxPer24h = Math.floor(income * game.taxRate);
+        var hoursPassed = game.taxTimer / 3600;
+        var blocked = (taxPer24h > 0 && hoursPassed >= 24);
 
         return '<div class="card invest-card ' + (blocked ? 'card-blocked' : '') + '">' +
             '<div class="card-icon">' + inv.icon + '</div>' +
@@ -1585,15 +1319,15 @@ function renderInvestments() {
 }
 
 function renderBusiness() {
-    const list = document.getElementById('businessList');
+    var list = document.getElementById('businessList');
     list.innerHTML = businesses.map(function(biz) {
-        const cost = getCost(biz.baseCost, biz.level);
-        const canAfford = game.balance >= cost;
-        const maxed = biz.level >= biz.maxLevel;
-        const income = biz.income * biz.level;
-        const taxPer24h = Math.floor(income * game.taxRate);
-        const hoursPassed = game.taxTimer / 3600;
-        const blocked = (taxPer24h > 0 && hoursPassed >= 24);
+        var cost = getCost(biz.baseCost, biz.level);
+        var canAfford = game.balance >= cost;
+        var maxed = biz.level >= biz.maxLevel;
+        var income = biz.income * biz.level;
+        var taxPer24h = Math.floor(income * game.taxRate);
+        var hoursPassed = game.taxTimer / 3600;
+        var blocked = (taxPer24h > 0 && hoursPassed >= 24);
 
         return '<div class="card biz-card ' + (blocked ? 'card-blocked' : '') + '">' +
             '<div class="card-icon">' + biz.icon + '</div>' +
@@ -1613,15 +1347,15 @@ function renderBusiness() {
 }
 
 function renderRealty() {
-    const list = document.getElementById('realtyList');
+    var list = document.getElementById('realtyList');
     list.innerHTML = realty.map(function(r) {
-        const cost = getCost(r.baseCost, r.level);
-        const canAfford = game.balance >= cost;
-        const maxed = r.level >= r.maxLevel;
-        const income = r.income * r.level;
-        const taxPer24h = Math.floor(income * game.taxRate);
-        const hoursPassed = game.taxTimer / 3600;
-        const blocked = (taxPer24h > 0 && hoursPassed >= 24);
+        var cost = getCost(r.baseCost, r.level);
+        var canAfford = game.balance >= cost;
+        var maxed = r.level >= r.maxLevel;
+        var income = r.income * r.level;
+        var taxPer24h = Math.floor(income * game.taxRate);
+        var hoursPassed = game.taxTimer / 3600;
+        var blocked = (taxPer24h > 0 && hoursPassed >= 24);
 
         return '<div class="card realty-card ' + (blocked ? 'card-blocked' : '') + '">' +
             '<div class="card-icon">' + r.icon + '</div>' +
@@ -1641,9 +1375,9 @@ function renderRealty() {
 }
 
 function renderItems() {
-    const list = document.getElementById('itemsList');
+    var list = document.getElementById('itemsList');
     list.innerHTML = items.map(function(item) {
-        const canAfford = game.balance >= item.cost;
+        var canAfford = game.balance >= item.cost;
         return '<div class="card item-card">' +
             '<div class="card-icon">' + item.icon + '</div>' +
             '<div class="card-info">' +
@@ -1658,7 +1392,7 @@ function renderItems() {
 }
 
 function renderAchievements() {
-    const list = document.getElementById('achievementsList');
+    var list = document.getElementById('achievementsList');
     list.innerHTML = achievements.map(function(ach) {
         return '<div class="card" style="opacity:' + (ach.unlocked ? 1 : 0.4) + '">' +
             '<div class="card-icon" style="background:' + (ach.unlocked ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' : '#334155') + ';">' + ach.icon + '</div>' +
@@ -1672,7 +1406,7 @@ function renderAchievements() {
 }
 
 function checkAchievements() {
-    let newUnlock = false;
+    var newUnlock = false;
     achievements.forEach(function(ach) {
         if (!ach.unlocked && ach.condition()) {
             ach.unlocked = true;
@@ -1686,8 +1420,8 @@ function checkAchievements() {
 
 // ==================== UPDATE UI ====================
 function updateUI() {
-    const card = cards[game.cardLevel];
-    const nextCard = cards[game.cardLevel + 1];
+    var card = cards[game.cardLevel];
+    var nextCard = cards[game.cardLevel + 1];
 
     document.getElementById('cardImg').textContent = card.icon;
     document.getElementById('cardImg').style.background = 'linear-gradient(135deg, ' + card.color + ', ' + card.color + ')';
@@ -1695,7 +1429,7 @@ function updateUI() {
     document.getElementById('cardName').textContent = card.name;
     document.getElementById('cardDesc').textContent = card.desc;
 
-    const cardBtn = document.getElementById('cardBtn');
+    var cardBtn = document.getElementById('cardBtn');
     if (nextCard) {
         cardBtn.textContent = '$' + formatShort(nextCard.cost);
         cardBtn.disabled = game.balance < nextCard.cost;
@@ -1708,19 +1442,19 @@ function updateUI() {
 
     document.getElementById('balance').textContent = '$ ' + formatMoney(game.balance);
 
-    let pc = game.perClickBase;
+    var pc = game.perClickBase;
     if (game.adBoostActive) pc *= game.adBoostMultiplier;
     pc = Math.floor(pc);
     document.getElementById('perClick').textContent = '$ ' + formatMoney(pc);
     document.getElementById('clickLvl').textContent = 'ур. ' + game.clickLevel + '/11';
 
-    const clickBtn = document.getElementById('clickUpgradeBtn');
+    var clickBtn = document.getElementById('clickUpgradeBtn');
     if (game.clickLevel >= 11) {
         clickBtn.textContent = 'MAX';
         clickBtn.disabled = true;
         clickBtn.className = 'click-upgrade-btn maxed';
     } else {
-        const clickCost = game.clickUpgradeCosts[game.clickLevel - 1];
+        var clickCost = game.clickUpgradeCosts[game.clickLevel - 1];
         clickBtn.textContent = 'Улучшить $' + formatShort(clickCost);
         clickBtn.disabled = game.balance < clickCost;
         clickBtn.className = 'click-upgrade-btn buy';
@@ -1735,10 +1469,10 @@ function updateUI() {
     document.getElementById('statRealty').textContent = realty.filter(function(r) { return r.level > 0; }).length;
     document.getElementById('statPassive').textContent = '$' + formatShort(game.passiveIncomePerHour) + '/ч';
 
-    const hasAffordableInv = investments.some(function(i) { return game.balance >= getCost(i.baseCost, i.level) && i.level < i.maxLevel; });
-    const hasAffordableBiz = businesses.some(function(b) { return game.balance >= getCost(b.baseCost, b.level) && b.level < b.maxLevel; });
-    const hasAffordableRealty = realty.some(function(r) { return game.balance >= getCost(r.baseCost, r.level) && r.level < r.maxLevel; });
-    const hasAffordableItem = items.some(function(i) { return game.balance >= i.cost && !i.owned; });
+    var hasAffordableInv = investments.some(function(i) { return game.balance >= getCost(i.baseCost, i.level) && i.level < i.maxLevel; });
+    var hasAffordableBiz = businesses.some(function(b) { return game.balance >= getCost(b.baseCost, b.level) && b.level < b.maxLevel; });
+    var hasAffordableRealty = realty.some(function(r) { return game.balance >= getCost(r.baseCost, r.level) && r.level < r.maxLevel; });
+    var hasAffordableItem = items.some(function(i) { return game.balance >= i.cost && !i.owned; });
 
     document.getElementById('badgeInvest').style.display = hasAffordableInv ? 'flex' : 'none';
     document.getElementById('badgeBiz').style.display = hasAffordableBiz ? 'flex' : 'none';
@@ -1763,10 +1497,8 @@ function switchTab(tab) {
 }
 
 // ==================== INIT ====================
-updateUI();
-recalcPassive();
+loadGame();
 
-// Create background decorations
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(createBgEmojis, 500);
 });
@@ -1774,20 +1506,18 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     setTimeout(createBgEmojis, 500);
 }
 
-// Track pressed keys to prevent auto-repeat spam
-const pressedKeys = {};
+var pressedKeys = {};
 
 document.addEventListener('keydown', function(e) {
     if (e.code === 'Space' && document.getElementById('tab-earn').classList.contains('active')) {
-        // Ignore if key is already held down (auto-repeat)
         if (pressedKeys['Space']) {
             e.preventDefault();
             return;
         }
         pressedKeys['Space'] = true;
         e.preventDefault();
-        const btn = document.getElementById('clickBtn');
-        const rect = btn.getBoundingClientRect();
+        var btn = document.getElementById('clickBtn');
+        var rect = btn.getBoundingClientRect();
         handleClick({ clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2 });
         btn.style.transform = 'scale(0.92)';
         setTimeout(function() { btn.style.transform = ''; }, 100);
